@@ -7,5 +7,5 @@ dist/
 .ruff_cache/
 .venv/
 output/
-misc/
+misc
 .DS_Store
