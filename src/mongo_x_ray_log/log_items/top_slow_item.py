@@ -9,7 +9,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
 from bson import json_util
-from x_ray.utils import escape_markdown, format_json_md, json_hash
+from mongo_x_ray.utils import escape_markdown, format_json_md, json_hash
 
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.query_analyzer import analyze_query_pattern

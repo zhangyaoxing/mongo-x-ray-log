@@ -9,8 +9,8 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 from datetime import datetime
 
-from x_ray.shared import to_json
-from x_ray.version import Version
+from mongo_x_ray.shared import to_json
+from mongo_x_ray.version import Version
 
 
 def test_to_json():

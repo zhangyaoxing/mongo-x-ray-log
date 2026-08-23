@@ -10,7 +10,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 
 from typing import Any
 
-from x_ray.utils import json_hash
+from mongo_x_ray.utils import json_hash
 
 DATA_TYPES = [
     "$binary",

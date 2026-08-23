@@ -14,7 +14,7 @@ from re import search, split
 from typing import Optional
 
 from bson import json_util
-from x_ray.utils import (
+from mongo_x_ray.utils import (
     escape_markdown,
     get_script_path,
     json_hash,
@@ -23,11 +23,11 @@ from x_ray.utils import (
     truncate_content,
     yellow,
 )
-from x_ray.version import Version
+from mongo_x_ray.version import Version
 
 from mongo_x_ray_log.log_items.base_item import BaseItem
 
-COMPATIBILITY_MATRIX_JSON = files("x_ray") / "compatibility_matrix.json"
+COMPATIBILITY_MATRIX_JSON = files("mongo_x_ray") / "compatibility_matrix.json"
 
 
 class ClientMetaItem(BaseItem):

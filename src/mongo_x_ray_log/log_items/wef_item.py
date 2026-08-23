@@ -12,7 +12,7 @@ import html as html_mod
 from random import randint
 
 from bson import json_util
-from x_ray.utils import bold, env, escape_markdown, green, yellow
+from mongo_x_ray.utils import bold, env, escape_markdown, green, yellow
 
 from mongo_x_ray_log.log_items.base_item import BaseItem
 
@@ -49,7 +49,10 @@ class WEFItem(BaseItem):
 
         if self._ai_support == "gpt":
             try:
-                from x_ray.ai_client import GPT_MODEL, analyze_log_line_gpt  # pylint: disable=import-outside-toplevel
+                from mongo_x_ray.ai_client import (  # pylint: disable=import-outside-toplevel
+                    GPT_MODEL,
+                    analyze_log_line_gpt,
+                )
 
                 if env == "development":
                     cache = [self._cache[randint(0, len(self._cache) - 1)]] if len(self._cache) > 0 else []
@@ -74,7 +77,7 @@ class WEFItem(BaseItem):
     def _match_risks(self) -> None:
         """Enrich cache entries with matched risk info via vector search."""
         try:
-            from x_ray.risk_register import match_risk  # pylint: disable=import-outside-toplevel
+            from mongo_x_ray.risk_register import match_risk  # pylint: disable=import-outside-toplevel
         except ImportError:
             return
         for entry in self._cache:

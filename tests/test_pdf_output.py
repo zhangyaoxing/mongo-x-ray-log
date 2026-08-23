@@ -19,8 +19,8 @@ def _assert_all_report_formats(output_folder):
 
 def test_log_pdf_format_writes_all_reports(tmp_path, monkeypatch):
     output_folder = tmp_path / "log"
-    monkeypatch.setattr("x_ray.framework.env", "development")
-    monkeypatch.setattr("x_ray.framework.html_to_pdf", _fake_pdf_conversion)
+    monkeypatch.setattr("mongo_x_ray.framework.env", "development")
+    monkeypatch.setattr("mongo_x_ray.framework.html_to_pdf", _fake_pdf_conversion)
     framework = Framework(
         "/var/log/mongodb/mongod.log",
         {

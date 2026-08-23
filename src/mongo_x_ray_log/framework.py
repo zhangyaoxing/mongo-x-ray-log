@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Optional, TextIO
 
 from bson import json_util
-from x_ray.framework import BaseFramework
-from x_ray.shared import to_json
-from x_ray.utils import bold, cyan, env, green, load_classes, yellow
+from mongo_x_ray.framework import BaseFramework
+from mongo_x_ray.shared import to_json
+from mongo_x_ray.utils import bold, cyan, env, green, load_classes, yellow
 
 from mongo_x_ray_log.log_items.info_item import InfoItem
 from mongo_x_ray_log.log_items.state_trace_item import StateTraceItem
