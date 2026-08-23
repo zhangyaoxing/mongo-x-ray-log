@@ -8,7 +8,7 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
-from x_ray_log.log_items.base_item import BaseItem
+from mongo_x_ray_log.log_items.base_item import BaseItem
 
 
 class SlowChartItem(BaseItem):

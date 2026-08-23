@@ -72,7 +72,7 @@ class BaseItem:
         # Write JS snippet to the file
         file_name = f"{self.__class__.__name__}.js"
         file_path = os.path.join("templates", "log", "snippets", file_name)
-        file_path = get_script_path(file_path, package="x_ray_log")
+        file_path = get_script_path(file_path, package="mongo_x_ray_log")
         self._logger.debug("Using JS snippet file: %s", file_path)
 
         f.write(f"## {self.name}\n\n")

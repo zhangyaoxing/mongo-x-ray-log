@@ -22,7 +22,7 @@ pytest.importorskip("playwright")  # pylint: disable=wrong-import-position
 
 from x_ray.utils import load_config
 
-from x_ray_log.framework import Framework as LogAnalysisFramework
+from mongo_x_ray_log.framework import Framework as LogAnalysisFramework
 
 # Playwright fixtures are named after their injected value (browser, page,
 # report_html), so parameters and fixture locals shadow the outer fixture

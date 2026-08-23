@@ -11,8 +11,8 @@ import io
 
 from bson import json_util
 
+from mongo_x_ray_log.log_items.wef_item import WEFItem
 from tests.mocking import gen_mock_write_output
-from x_ray_log.log_items.wef_item import WEFItem
 
 LOGS = [
     json_util.loads(

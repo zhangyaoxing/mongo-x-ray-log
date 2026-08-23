@@ -25,7 +25,7 @@ from x_ray.utils import (
 )
 from x_ray.version import Version
 
-from x_ray_log.log_items.base_item import BaseItem
+from mongo_x_ray_log.log_items.base_item import BaseItem
 
 COMPATIBILITY_MATRIX_JSON = files("x_ray") / "compatibility_matrix.json"
 

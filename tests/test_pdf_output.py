@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from pathlib import Path
 
-from x_ray_log.framework import Framework
+from mongo_x_ray_log.framework import Framework
 
 
 def _fake_pdf_conversion(html_file, pdf_file):

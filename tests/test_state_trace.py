@@ -9,8 +9,8 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 from bson import json_util
 
+from mongo_x_ray_log.log_items.state_trace_item import StateTraceItem
 from tests.mocking import gen_mock_write_output
-from x_ray_log.log_items.state_trace_item import StateTraceItem
 
 LOGS = [
     json_util.loads(

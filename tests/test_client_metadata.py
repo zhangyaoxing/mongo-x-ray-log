@@ -12,13 +12,13 @@ import json
 from bson import json_util
 from x_ray.version import Version
 
-from tests.mocking import gen_mock_write_output
-from x_ray_log.log_items.client_meta_item import (
+from mongo_x_ray_log.log_items.client_meta_item import (
     COMPATIBILITY_MATRIX_JSON,
     ClientMetaItem,
     is_driver_compatible,
     parse_version_from_log,
 )
+from tests.mocking import gen_mock_write_output
 
 LOGS = [
     json_util.loads(

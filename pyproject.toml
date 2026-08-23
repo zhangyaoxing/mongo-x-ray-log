@@ -11,14 +11,14 @@ requires-python = ">=3.10,<4"
 dependencies = ["mongo-x-ray>=1.5.3"]
 
 [project.entry-points."x_ray.plugins"]
-log = "x_ray_log.plugin:LogPlugin"
+log = "mongo_x_ray_log.plugin:LogPlugin"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["x_ray_log*"]
+include = ["mongo_x_ray_log*"]
 
 [tool.setuptools.package-data]
-"x_ray_log" = ["templates/**/*"]
+"mongo_x_ray_log" = ["templates/**/*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

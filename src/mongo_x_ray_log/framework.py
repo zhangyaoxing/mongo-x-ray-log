@@ -20,11 +20,11 @@ from x_ray.framework import BaseFramework
 from x_ray.shared import to_json
 from x_ray.utils import bold, cyan, env, green, load_classes, yellow
 
-from x_ray_log.log_items.info_item import InfoItem
-from x_ray_log.log_items.state_trace_item import StateTraceItem
+from mongo_x_ray_log.log_items.info_item import InfoItem
+from mongo_x_ray_log.log_items.state_trace_item import StateTraceItem
 
 logger = logging.getLogger(__name__)
-LOG_CLASSES = load_classes("x_ray_log.log_items")
+LOG_CLASSES = load_classes("mongo_x_ray_log.log_items")
 SKIP_LINE_MSG = "HEADER INCLUDED, NOW SKIPPING 64728 LINES ACCORDING TO REQUESTED SIZE LIMIT"
 _SANITIZE_DATE_RE = re.compile(r'\{\s*"\$date"\s*:\s*\{\s*"\$numberLong"\s*:\s*"-?\d{16,}"\s*\}\s*\}')
 
@@ -61,7 +61,7 @@ def _normalise_datetimes(obj: dict) -> None:
 
 class Framework(BaseFramework):
     template_module = "log"
-    template_package = "x_ray_log"
+    template_package = "mongo_x_ray_log"
 
     def __init__(
         self,

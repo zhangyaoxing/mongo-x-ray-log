@@ -9,7 +9,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 from bson import json_util
 
-from x_ray_log.log_items.info_item import InfoItem
+from mongo_x_ray_log.log_items.info_item import InfoItem
 
 LOGS = [
     json_util.loads(

@@ -14,7 +14,7 @@ from random import randint
 from bson import json_util
 from x_ray.utils import bold, env, escape_markdown, green, yellow
 
-from x_ray_log.log_items.base_item import BaseItem
+from mongo_x_ray_log.log_items.base_item import BaseItem
 
 
 class WEFItem(BaseItem):

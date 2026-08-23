@@ -15,7 +15,7 @@ from pathlib import Path
 from x_ray.plugin import Plugin, discover_paths, open_report, utc_iso_datetime
 from x_ray.utils import bold, green, load_config
 
-from x_ray_log.framework import Framework
+from mongo_x_ray_log.framework import Framework
 
 logger = logging.getLogger(__name__)
 
