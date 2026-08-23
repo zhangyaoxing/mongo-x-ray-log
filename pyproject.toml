@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools==83.0.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mongo-x-ray-log"
+version = "1.5.3"
+description = "MongoDB log analysis plugin for x-ray"
+readme = "README.md"
+requires-python = ">=3.10,<4"
+dependencies = ["mongo-x-ray>=1.5.3"]
+
+[project.entry-points."x_ray.plugins"]
+log = "x_ray_log.plugin:LogPlugin"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["x_ray_log*"]
+
+[tool.setuptools.package-data]
+"x_ray_log" = ["templates/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+markers = [
+  "slow: marks tests as slow",
+  "integration: marks tests as integration tests",
+  "unit: marks tests as unit tests",
+]
+
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+exclude = [".venv", "build", "dist"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+

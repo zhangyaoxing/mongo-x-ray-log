@@ -1,0 +1,1 @@
+"""MongoDB log analysis package."""
