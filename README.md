@@ -16,6 +16,10 @@ pip install mongo-x-ray mongo-x-ray-log
 x-ray log /var/log/mongodb/mongod.log
 x-ray log /var/log/mongodb/ 2026-07-20T08:00:00Z 2026-07-20T10:00:00Z
 x-ray log /path/to/mongod.log -f html -o /path/to/output/
+# Analyze a random 10% of a large log
+x-ray log -r 0.1 mongodb.log
+# Discover log folders recursively
+x-ray log --discover /var/log/
 ```
 
 ## Parameters
