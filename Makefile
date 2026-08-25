@@ -1,4 +1,4 @@
-.PHONY: minify unit-test test help
+.PHONY: minify unit-test test lint help
 
 # Shared virtualenv lives in the sibling core checkout (same-folder layout).
 PYTHON ?= ../ce-mongo-x-ray/.venv/bin/python
@@ -18,6 +18,14 @@ unit-test:
 # Core-style alias for make test
 test: unit-test
 
+# Run ruff lint and format checks
+lint:
+	@echo "Running ruff check..."
+	$(PYTHON) -m ruff check src tests
+	@echo "Running ruff format check..."
+	$(PYTHON) -m ruff format --check src tests
+	@echo "\033[32m✓ No lint errors found!\033[0m"
+
 # Help information
 help:
 	@echo "mongo-x-ray-log Makefile"
@@ -26,4 +34,5 @@ help:
 	@echo "  make minify      - Minify HTML/JS/CSS templates"
 	@echo "  make unit-test   - Run the unit tests (non-integration)"
 	@echo "  make test        - Alias for unit-test"
+	@echo "  make lint        - Run ruff check and ruff format check"
 	@echo "  make help        - Display this help information"

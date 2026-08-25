@@ -56,8 +56,12 @@ Examples:
             type=utc_iso_datetime,
             help="Inclusive UTC end time in ISO-8601 format. Defaults to the last log line.",
         )
-        parser.add_argument("-s", "--checkset", help='Checkset to run. Defaults to "default".', type=str, default="default")
-        parser.add_argument("-o", "--output", help='Output folder path. Defaults to "output/".', type=str, default="output/")
+        parser.add_argument(
+            "-s", "--checkset", help='Checkset to run. Defaults to "default".', type=str, default="default"
+        )
+        parser.add_argument(
+            "-o", "--output", help='Output folder path. Defaults to "output/".', type=str, default="output/"
+        )
         parser.add_argument(
             "-f",
             "--format",
@@ -66,7 +70,9 @@ Examples:
             default="html",
             choices=["markdown", "html", "pdf"],
         )
-        parser.add_argument("--no-browser", help="Do not open the generated report in the browser.", action="store_true")
+        parser.add_argument(
+            "--no-browser", help="Do not open the generated report in the browser.", action="store_true"
+        )
         parser.add_argument(
             "-r",
             "--rate",

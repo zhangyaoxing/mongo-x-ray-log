@@ -2,11 +2,12 @@
 Copyright (c) 2025 MongoDB Inc.
 
 DISCLAIMER: THESE CODE SAMPLES ARE PROVIDED FOR EDUCATIONAL AND ILLUSTRATIVE PURPOSES ONLY,
-TO DEMONSTRATE THE FUNCTIONALITY OF SPECIFIC MONGODB FEATURES. 
+TO DEMONSTRATE THE FUNCTIONALITY OF SPECIFIC MONGODB FEATURES.
 THEY ARE NOT PRODUCTION-READY AND MAY LACK THE SECURITY HARDENING, ERROR HANDLING, AND TESTING REQUIRED FOR A LIVE ENVIRONMENT.
-YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR OWN ENVIRONMENT BEFORE IMPLEMENTATION. 
+YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR OWN ENVIRONMENT BEFORE IMPLEMENTATION.
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
+
 import json
 
 from bson import json_util
@@ -90,9 +91,9 @@ def test_version_parser():
     ]
     for log, target_driver, expected_version in zip(LOGS_2, target_drivers, expected_versions):
         parsed_version = parse_version_from_log(log["name"], log["version"], target_driver)
-        assert parsed_version == Version.parse(
-            expected_version
-        ), f"Expected {expected_version}, got {parsed_version} for driver {target_driver}"
+        assert parsed_version == Version.parse(expected_version), (
+            f"Expected {expected_version}, got {parsed_version} for driver {target_driver}"
+        )
 
 
 def test_is_driver_compatible():
@@ -104,6 +105,6 @@ def test_is_driver_compatible():
     expected_compatibility = [True, True, False, True, True, False, True]
     for log, expected in zip(LOGS_2, expected_compatibility):
         is_compatible = is_driver_compatible(log["name"], log["version"], server_version, matrix_70)
-        assert (
-            is_compatible == expected
-        ), f"Expected compatibility {expected} for driver {log['name']}, got {is_compatible}"
+        assert is_compatible == expected, (
+            f"Expected compatibility {expected} for driver {log['name']}, got {is_compatible}"
+        )

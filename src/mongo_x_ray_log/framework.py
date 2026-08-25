@@ -195,9 +195,9 @@ class Framework(BaseFramework):
 
         rate = self._config.get("sample_rate", 1.0)
         log_files = self._log_files()
-        partial_only = (self._start_time is not None or self._end_time is not None) and not self._any_file_fully_covered(
-            log_files
-        )
+        partial_only = (
+            self._start_time is not None or self._end_time is not None
+        ) and not self._any_file_fully_covered(log_files)
         if partial_only:
             self._logger.info(
                 "No log file is fully covered by the requested time range. "
@@ -259,9 +259,7 @@ class Framework(BaseFramework):
                                     try:
                                         item.analyze(log_line)
                                     except Exception as e:  # pylint: disable=broad-exception-caught
-                                        self._logger.warning(
-                                            yellow(f"Log analysis item '{item.name}' failed: {e}")
-                                        )
+                                        self._logger.warning(yellow(f"Log analysis item '{item.name}' failed: {e}"))
                             continue
 
                         for item in self._items:
@@ -283,9 +281,9 @@ class Framework(BaseFramework):
                 continue
 
     def _render_markdown(self, output: TextIO) -> None:
-        assert (
-            self._log_start is not None and self._log_end is not None
-        ), "Log start and end time should be set after analysis."
+        assert self._log_start is not None and self._log_end is not None, (
+            "Log start and end time should be set after analysis."
+        )
         output.write("# Log Analysis Report\n")
         output.write(f"Generated at: `{str(datetime.now(tz=timezone.utc))} UTC`\n\n")
         output.write(f"Log path: `{self._file_path}`\n\n")

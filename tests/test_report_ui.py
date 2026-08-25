@@ -66,9 +66,7 @@ def report_html(request, tmp_path_factory):
     config = load_config(None)["log"]
     framework = LogAnalysisFramework(str(log_file), deepcopy(config))
     framework.run_logs_analysis("default", output_folder=f"{output_dir}/")
-    framework.output_results(
-        output_folder=f"{output_dir}/", fmt="html", open_browser=False
-    )
+    framework.output_results(output_folder=f"{output_dir}/", fmt="html", open_browser=False)
     html_files = list(output_dir.rglob("report.html"))
     assert html_files, "report.html was not generated"
     return request.param, html_files[0]
