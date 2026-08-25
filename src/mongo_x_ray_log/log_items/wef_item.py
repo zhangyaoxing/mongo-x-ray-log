@@ -49,10 +49,9 @@ class WEFItem(BaseItem):
 
         if self._ai_support == "gpt":
             try:
-                from mongo_x_ray.ai_client import (
-                    GPT_MODEL,
-                    analyze_log_line_gpt,
-                )
+                from mongo_x_ray.ai_client import GPT_MODEL
+
+                from mongo_x_ray_log.ai import analyze_log_line_gpt
 
                 if env == "development":
                     cache = [self._cache[randint(0, len(self._cache) - 1)]] if len(self._cache) > 0 else []
