@@ -22,6 +22,7 @@ logger = logging.getLogger(__name__)
 
 class LogPlugin(Plugin):
     name = "log"
+    distribution = "mongo-x-ray-log"
     help = "Analyze MongoDB log files"
     description = """
 Analyze MongoDB log files to identify patterns, issues, and optimization opportunities.
