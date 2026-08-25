@@ -76,7 +76,7 @@ class WEFItem(BaseItem):
     def _match_risks(self) -> None:
         """Enrich cache entries with matched risk info via vector search."""
         try:
-            from mongo_x_ray_risk_register import match_risk
+            from mongo_x_ray_risk import match_risk
         except ImportError:
             return
         for entry in self._cache:
