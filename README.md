@@ -22,6 +22,14 @@ x-ray log -r 0.1 mongodb.log
 x-ray log --discover /var/log/
 ```
 
+## Compatibility
+
+Supports MongoDB 5.0 and above on all topologies:
+
+| Replica Set | Sharded Cluster | Standalone |
+| :---------: | :-------------: | :--------: |
+| ✅ | ✅ | ✅ |
+
 ## Parameters
 
 ```bash
