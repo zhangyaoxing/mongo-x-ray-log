@@ -1,9 +1,5 @@
 {
     "python.defaultInterpreterPath": "${workspaceFolder}/../ce-mongo-x-ray/.venv/bin/python",
-    "python.analysis.extraPaths": [
-        "${workspaceFolder}/src",
-        "${workspaceFolder}/../ce-mongo-x-ray/src"
-    ],
     "editor.formatOnSave": true,
     "editor.codeActionsOnSave": {
         "source.fixAll.ruff": "explicit",

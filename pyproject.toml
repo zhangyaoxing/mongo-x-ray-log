@@ -42,3 +42,13 @@ exclude = [".venv", "build", "dist"]
 select = ["E", "F", "I"]
 ignore = ["E501"]
 
+
+[tool.pyright]
+pythonVersion = "3.10"
+venvPath = "../ce-mongo-x-ray"
+venv = ".venv"
+typeCheckingMode = "basic"
+extraPaths = [
+  "src",
+  "../ce-mongo-x-ray/src",
+]
