@@ -47,7 +47,7 @@ def test_info_item():
     item = InfoItem(output_folder="/tmp", config={})
     for log in LOGS:
         item.analyze(log)
-    result = item._cache  # pylint: disable=protected-access
+    result = item._cache
     assert "process" in result
     assert result["process"]["pid"] == 39309
     assert "replica_set" in result

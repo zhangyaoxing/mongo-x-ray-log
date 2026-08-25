@@ -42,12 +42,12 @@ def _safe_json_loads(line: str) -> dict:
         parsed = json_util.loads(line)
         _normalise_datetimes(parsed)
         return parsed
-    except Exception as exc:  # pylint: disable=broad-exception-caught
+    except Exception as exc:
         try:
             parsed = json_util.loads(_sanitize_date_numberlong(line))
             _normalise_datetimes(parsed)
             return parsed
-        except Exception:  # pylint: disable=broad-exception-caught
+        except Exception:
             logger.debug("JSON parse failed (first error: %s): %s", exc, line.strip()[:200])
             return {}
 
@@ -86,7 +86,7 @@ class Framework(BaseFramework):
         """The hostname from the Process Info log item, or from log lines."""
         for item in self._items:
             if isinstance(item, InfoItem):
-                host = item._cache.get("process", {}).get("host")  # pylint: disable=protected-access
+                host = item._cache.get("process", {}).get("host")
                 if host and host != "Unknown":
                     return host
                 break
@@ -130,7 +130,7 @@ class Framework(BaseFramework):
                             break
                 if last_line:
                     last_ts = _safe_json_loads(last_line).get("t")
-        except Exception as exc:  # pylint: disable=broad-exception-caught
+        except Exception as exc:
             logger.warning("Failed to read time range from %s: %s", file_path.name, exc)
         logger.debug(
             "File %s time range: %s – %s",
@@ -258,17 +258,17 @@ class Framework(BaseFramework):
                                 if isinstance(item, (InfoItem, StateTraceItem)):
                                     try:
                                         item.analyze(log_line)
-                                    except Exception as e:  # pylint: disable=broad-exception-caught
+                                    except Exception as e:
                                         self._logger.warning(yellow(f"Log analysis item '{item.name}' failed: {e}"))
                             continue
 
                         for item in self._items:
                             try:
                                 item.analyze(log_line)
-                            except Exception as e:  # pylint: disable=broad-exception-caught
+                            except Exception as e:
                                 self._logger.warning(yellow(f"Log analysis item '{item.name}' failed: {e}"))
                                 continue
-                    except Exception as exc:  # pylint: disable=broad-exception-caught
+                    except Exception as exc:
                         self._logger.warning(yellow(f"Unexpected error processing log line: {exc}"))
                         continue
 
@@ -276,7 +276,7 @@ class Framework(BaseFramework):
         for item in self._items:
             try:
                 item.finalize_analysis()
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except Exception as e:
                 self._logger.warning(yellow(f"Log analysis item '{item.name}' finalize failed: {e}"))
                 continue
 
@@ -299,6 +299,6 @@ class Framework(BaseFramework):
         for item in self._items:
             try:
                 item.review_results_markdown(output)
-            except Exception as e:  # pylint: disable=broad-exception-caught
+            except Exception as e:
                 self._logger.warning(yellow(f"Failed to generate markdown for log item '{item.name}': {e}"))
                 continue

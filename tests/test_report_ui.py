@@ -18,7 +18,7 @@ from pathlib import Path
 
 import pytest
 
-pytest.importorskip("playwright")  # pylint: disable=wrong-import-position
+pytest.importorskip("playwright")
 
 from mongo_x_ray.utils import load_config
 
@@ -29,7 +29,6 @@ from mongo_x_ray_log.framework import Framework as LogAnalysisFramework
 # function names, and the importorskip/lazy-playwright-import ordering is
 # deliberate: the whole module is skipped when Chromium is missing — the
 # idiomatic pytest patterns.
-# pylint: disable=redefined-outer-name,wrong-import-position
 
 
 def _log_samples():
@@ -74,12 +73,12 @@ def report_html(request, tmp_path_factory):
 
 @pytest.fixture(scope="module")
 def browser():
-    from playwright.sync_api import sync_playwright  # pylint: disable=import-outside-toplevel
+    from playwright.sync_api import sync_playwright
 
     with sync_playwright() as p:
         try:
             browser = p.chromium.launch()
-        except Exception as exc:  # pylint: disable=broad-exception-caught
+        except Exception as exc:
             pytest.skip(f"Chromium is not installed for Playwright: {exc}")
         yield browser
         browser.close()

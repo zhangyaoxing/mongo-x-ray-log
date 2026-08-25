@@ -49,7 +49,7 @@ class WEFItem(BaseItem):
 
         if self._ai_support == "gpt":
             try:
-                from mongo_x_ray.ai_client import (  # pylint: disable=import-outside-toplevel
+                from mongo_x_ray.ai_client import (
                     GPT_MODEL,
                     analyze_log_line_gpt,
                 )
@@ -77,7 +77,7 @@ class WEFItem(BaseItem):
     def _match_risks(self) -> None:
         """Enrich cache entries with matched risk info via vector search."""
         try:
-            from mongo_x_ray.risk_register import match_risk  # pylint: disable=import-outside-toplevel
+            from mongo_x_ray.risk_register import match_risk
         except ImportError:
             return
         for entry in self._cache:
