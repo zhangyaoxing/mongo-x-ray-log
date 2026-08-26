@@ -80,6 +80,7 @@ def browser():
             browser = p.chromium.launch()
         except Exception as exc:
             pytest.skip(f"Chromium is not installed for Playwright: {exc}")
+            return  # unreachable — pytest.skip raises; keeps CodeQL's dataflow happy
         yield browser
         browser.close()
 
