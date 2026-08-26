@@ -5,11 +5,7 @@ Uses the shared client in :mod:`mongo_x_ray.ai_client`.
 
 from __future__ import annotations
 
-import logging
-
 from mongo_x_ray.ai_client import complete
-
-_logger = logging.getLogger(__name__)
 
 _SYSTEM_PROMPT = "You are a MongoDB expert. Analyze MongoDB log messages and tell me the reason in max 200 words."
 
