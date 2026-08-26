@@ -8,7 +8,10 @@ version = "2.0.0"
 description = "MongoDB log analysis plugin for x-ray"
 readme = "README.md"
 requires-python = ">=3.10,<4"
-dependencies = ["mongo-x-ray>=2.0.0"]
+dependencies = [
+  "mongo-x-ray>=2.0.0",
+  "pymongo>=4.0",
+]
 
 [project.entry-points."mongo_x_ray.plugins"]
 log = "mongo_x_ray_log.plugin:LogPlugin"
