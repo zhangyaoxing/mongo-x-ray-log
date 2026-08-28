@@ -9,6 +9,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
 from mongo_x_ray_log.log_items.base_item import BaseItem
+from mongo_x_ray_log.parsers.state_trace_parser import StateTraceParser
 
 
 class StateTraceItem(BaseItem):
@@ -166,5 +167,5 @@ class StateTraceItem(BaseItem):
         super().finalize_analysis()
 
     def review_results_markdown(self, f):
-        super().review_results_markdown(f)
-        f.write(f'<canvas id="canvas_{self.__class__.__name__}" class="bar"></canvas>\n')
+        parser = StateTraceParser()
+        f.write(parser.markdown(self._load_records()))

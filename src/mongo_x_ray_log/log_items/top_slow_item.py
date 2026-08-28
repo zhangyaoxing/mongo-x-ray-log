@@ -8,10 +8,9 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
-from bson import json_util
-
-from mongo_x_ray.utils import escape_markdown, format_json_md, json_hash
+from mongo_x_ray.utils import json_hash
 from mongo_x_ray_log.log_items.base_item import BaseItem
+from mongo_x_ray_log.parsers.top_slow_parser import TopSlowParser
 from mongo_x_ray_log.query_analyzer import analyze_query_pattern
 
 
@@ -77,49 +76,5 @@ class TopSlowItem(BaseItem):
         super().finalize_analysis()
 
     def review_results_markdown(self, f):
-        super().review_results_markdown(f)
-        f.write('<div id="top_slow_positioner"></div>\n\n')
-        f.write("|Query Hash|Op|Pattern|Details|Plan Summary|\n")
-        f.write("|---|---|---|---|---|\n")
-        # Total Duration (ms)|Count|Avg Duration (ms)|Scanned / Returned|ScannedObj / Returned|Has Sort
-        i = 0
-        with open(self._output_file, "r", encoding="utf-8") as data:
-            for line in data:
-                line_json = json_util.loads(line)
-                query_hash = line_json.get("query_hash", "N/A")
-                ns = line_json.get("ns", "N/A")
-                query_pattern = line_json.get("query_pattern") or {}
-                op = query_pattern.get("type", "UNKNOWN")
-                pattern = query_pattern.get("pattern", {})
-                # query_hash = query_hash if query_hash != "" else "N/A"
-                duration = line_json.get("duration", 0)
-                count = line_json.get("count", 0)
-                avg_duration = round(duration / count, 2) if count > 0 else 0
-                n_returned = line_json.get("n_returned", 0)
-                keys_examined = line_json.get("keys_examined", 0)
-                docs_examined = line_json.get("docs_examined", 0)
-                has_sort = "Yes" if line_json.get("has_sort", False) else "No"
-                scanned_per_returned = round(keys_examined / n_returned, 2) if n_returned > 0 else keys_examined
-                scannedobj_per_returned = round(docs_examined / n_returned, 2) if n_returned > 0 else docs_examined
-                details = {
-                    "Total Duration (ms)": duration,
-                    "Count": count,
-                    "Avg Duration (ms)": avg_duration,
-                    "Targeting": scanned_per_returned,
-                    "Targeting (Obj)": scannedobj_per_returned,
-                    "Has Sort": has_sort,
-                }
-                plan_summary = line_json.get("plan_summary", "N/A")
-                plan_summary = escape_markdown(plan_summary if plan_summary != "" else "N/A")
-                cols = [
-                    f"[{query_hash}](#{i})",
-                    f"`{op}` on `{ns}`",
-                    f"<pre>{format_json_md(pattern)}</pre>",
-                    f"<pre>{format_json_md(details)}</pre>",
-                    f"{plan_summary}",
-                ]
-                f.write(f"|{'|'.join(cols)}|\n")
-                i += 1
-        f.write("\n```json\n")
-        f.write("// Click query hash to display sample query...\n")
-        f.write("```\n")
+        parser = TopSlowParser()
+        f.write(parser.markdown(self._load_records()))

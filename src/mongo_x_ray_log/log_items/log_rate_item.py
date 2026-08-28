@@ -11,6 +11,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 from datetime import datetime
 
 from mongo_x_ray_log.log_items.base_item import BaseItem
+from mongo_x_ray_log.parsers.log_rate_parser import LogRateParser
 
 
 class LogRateItem(BaseItem):
@@ -62,5 +63,5 @@ class LogRateItem(BaseItem):
         super().finalize_analysis()
 
     def review_results_markdown(self, f) -> None:
-        super().review_results_markdown(f)
-        f.write(f'<canvas id="canvas_{self.__class__.__name__}" class="bar"></canvas>\n')
+        parser = LogRateParser()
+        f.write(parser.markdown(self._load_records()))

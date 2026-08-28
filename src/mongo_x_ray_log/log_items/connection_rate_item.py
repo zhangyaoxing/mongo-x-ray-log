@@ -12,6 +12,7 @@ import math
 from datetime import datetime
 
 from mongo_x_ray_log.log_items.base_item import BaseItem
+from mongo_x_ray_log.parsers.connection_rate_parser import ConnectionRateParser
 
 
 class ConnectionRateItem(BaseItem):
@@ -56,6 +57,5 @@ class ConnectionRateItem(BaseItem):
         self._cache["byIp"][ip][counter] += 1
 
     def review_results_markdown(self, f):
-        super().review_results_markdown(f)
-        f.write(f'<canvas id="canvas_{self.__class__.__name__}"></canvas>\n')
-        f.write(f'<canvas id="canvas_{self.__class__.__name__}_byip"></canvas>\n')
+        parser = ConnectionRateParser()
+        f.write(parser.markdown(self._load_records()))

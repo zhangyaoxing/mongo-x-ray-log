@@ -319,6 +319,10 @@ class Framework(BaseFramework):
             review_title = f"2.{i + 1} Review {item.name}"
             output.write(f"### {review_title}\n\n")
             output.write(f"[&larr; Review Test Results](#{title_id})\n\n")
+            if getattr(item, "_show_reset", False):
+                output.write(
+                    f'<input type="button" id="reset_{item.__class__.__name__}" class="table-copy-button" value="Reset">\n\n'
+                )
             try:
                 item.review_results_markdown(output)
             except Exception as e:

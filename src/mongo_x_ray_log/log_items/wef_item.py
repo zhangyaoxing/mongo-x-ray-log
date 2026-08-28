@@ -8,13 +8,11 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
-import html as html_mod
 from random import randint
 
-from bson import json_util
-
-from mongo_x_ray.utils import bold, env, escape_markdown, green, yellow
+from mongo_x_ray.utils import bold, env, green, yellow
 from mongo_x_ray_log.log_items.base_item import BaseItem
+from mongo_x_ray_log.parsers.wef_parser import WEFParser
 
 
 class WEFItem(BaseItem):
@@ -87,41 +85,5 @@ class WEFItem(BaseItem):
                 entry["matched_risk"] = risk
 
     def review_results_markdown(self, f):
-        super().review_results_markdown(f)
-        f.write('<div id="wef_positioner"></div>\n\n')
-        f.write("|Code{100px}|Severity{100px}|Message{*}|Count{100px}|Known Risks{150}|\n")
-        f.write("|:---:|:---:|---|:---:|:---|\n")
-        rows = []
-        i = 0
-        with open(self._output_file, "r", encoding="utf-8") as data:
-            for line in data:
-                line_json = json_util.loads(line)
-                log_id = line_json.get("id", "Unknown")
-                severity = line_json.get("severity", "Unknown").upper()
-                msg = line_json.get("msg", "")
-                count = len(line_json.get("timestamp", []))
-                risk_html = ""
-                mr = line_json.get("matched_risk")
-                if mr:
-                    rid = html_mod.escape(str(mr.get("id", "")))
-                    rname = html_mod.escape(str(mr.get("name", ""))).replace("\r\n", "<br>").replace("\n", "<br>")
-                    rdesc = (
-                        html_mod.escape(str(mr.get("description", "")))
-                        .replace("\r\n", "<br>")
-                        .replace("\n", "<br>")
-                        .replace("\r", "<br>")
-                    )
-                    risk_html = (
-                        f'<span class="risk-badge">RISK-{rid}'
-                        f'<span class="risk-tooltip">'
-                        f'<span class="risk-name">{rname}</span>'
-                        f"{rdesc}</span></span>"
-                    )
-                rows.append(f"|[{log_id}](#{i})|{severity}|{escape_markdown(msg)}|{count}|{risk_html}|\n")
-                i += 1
-        rows = sorted(rows, key=lambda x: x.lower())
-        for row in rows:
-            f.write(row)
-        f.write("```json\n")
-        f.write("// Click error code to review sample log line...\n")
-        f.write("```\n")
+        parser = WEFParser()
+        f.write(parser.markdown(self._load_records()))

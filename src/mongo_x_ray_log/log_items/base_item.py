@@ -15,8 +15,8 @@ from typing import Any, Optional
 
 from bson import json_util
 
-from mongo_x_ray.shared import SEVERITY, to_json
-from mongo_x_ray.utils import get_script_path, to_ejson
+from mongo_x_ray.shared import SEVERITY
+from mongo_x_ray.utils import to_ejson
 from mongo_x_ray.version import Version
 from mongo_x_ray_log.rules.base_rule import BaseRule
 
@@ -132,35 +132,13 @@ class BaseItem:
         for item in items:
             self.append_test_result(item["host"], item["severity"], item["title"], item["description"])
 
-    def review_results_markdown(self, f) -> None:
-        # Write JS snippet to the file
-        file_name = f"{self.__class__.__name__}.js"
-        file_path = os.path.join("templates", "log", "snippets", file_name)
-        file_path = get_script_path(file_path, package="mongo_x_ray_log")
-        self._logger.debug("Using JS snippet file: %s", file_path)
+    def _load_records(self) -> list:
+        """Load the analysed records from the output file."""
+        with open(self._output_file, "r", encoding="utf-8") as f:
+            return [json_util.loads(line) for line in f]
 
-        if self._show_reset:
-            f.write(
-                f'<input type="button" id="reset_{self.__class__.__name__}" class="table-copy-button" value="Reset">\n\n'
-            )
-        f.write('<script type="text/javascript">\n')
-        f.write("document.addEventListener('DOMContentLoaded', function() {\n")
-        if self._show_reset:
-            f.write(f"let resetButton = document.getElementById('reset_{self.__class__.__name__}');\n")
-        f.write("let data = [\n")
-        with open(self._output_file, "r", encoding="utf-8") as data:
-            for line in data:
-                # The data is in EJSON format, convert it to JSON
-                line_json = json_util.loads(line)
-                f.write(to_json(line_json))
-                f.write(", \n")
-        f.write("];\n")
-        if os.path.isfile(file_path):
-            with open(file_path, "r", encoding="utf-8") as js:
-                for line in js:
-                    f.write(line.replace("{name}", self.__class__.__name__))
-        f.write("});\n")
-        f.write("</script>\n")
+    def review_results_markdown(self, f) -> None:
+        raise NotImplementedError("Subclasses should implement this method.")
 
     def _write_output(self) -> None:
         # Open file steam and write the cache to file

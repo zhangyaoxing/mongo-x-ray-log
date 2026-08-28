@@ -8,8 +8,8 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
-from mongo_x_ray.shared import to_json
 from mongo_x_ray_log.log_items.base_item import BaseItem
+from mongo_x_ray_log.parsers.info_parser import InfoParser
 
 
 class InfoItem(BaseItem):
@@ -93,68 +93,5 @@ class InfoItem(BaseItem):
         self._cache["cert_info"] = cert_info
 
     def review_results_markdown(self, f):
-        super().review_results_markdown(f)
-        if not self._cache:
-            f.write("No basic info found in the logs.\n")
-            return
-        process = self._cache.get("process", None)
-        build_info = self._cache.get("build_info", None)
-        fcv = self._cache.get("fcv", None)
-        if build_info:
-            f.write("### Process Info\n\n")
-            version = build_info.get("version", "Unknown")
-            if "enterprise" in build_info.get("modules", []):
-                version += "-ent"
-            f.write(f"- MongoDB `{version}` ")
-            if fcv:
-                f.write(f" (FCV: `{fcv}`)")
-            if process:
-                f.write(
-                    f" PID `{process.get('pid', 'Unknown')}` running on `{process.get('host', 'Unknown')}:{process.get('port', 'Unknown')}`\n"
-                )
-            f.write("\n")
-        cert_info = self._cache.get("cert_info", None)
-        if cert_info:
-            f.write("### Certificate Info\n\n")
-            key_file = cert_info.get("keyFile", "Unknown")
-            subject = cert_info.get("subject", "Unknown")
-            issuer = cert_info.get("issuer", "Unknown")
-            valid_from = cert_info.get("notValidBefore", "Unknown")
-            valid_to = cert_info.get("notValidAfter", "Unknown")
-            cert_type = cert_info.get("type", "Unknown")
-            f.write(f"- Key File: `{key_file}`\n")
-            f.write(f"- Type: `{cert_type}`\n")
-            f.write(f"- Subject: `{subject}`\n")
-            f.write(f"- Issuer: `{issuer}`\n")
-            f.write(f"- Valid: `{valid_from}` ~ `{valid_to}`\n\n")
-        guest_os = self._cache.get("os", None)
-        if guest_os:
-            f.write("### Operating System\n\n")
-            f.write(f"- {guest_os.get('name', 'Unknown')}\n")
-            f.write(f"- {guest_os.get('version', 'Unknown')}\n\n")
-        replica_set = self._cache.get("replica_set", {})
-        rs_config = replica_set.get("config", None)
-        if replica_set:
-            f.write("### Replica Set Config\n\n")
-            f.write(
-                f"Replica Set Name: `{rs_config.get('_id', 'Unknown')}`, member state: `{replica_set.get('memberState', 'Unknown')}`\n\n"
-            )
-            f.write("|Member|Host|Arbiter|Priority|Votes|Hidden|Delay|\n")
-            f.write("|------|----|-------|--------|-----|------|-----|\n")
-            for member in rs_config.get("members", []):
-                f.write(
-                    f"|{member.get('_id', 'Unknown')}|{member.get('host', 'Unknown')}|{member.get('arbiterOnly', False)}|{member.get('priority', 0)}|{member.get('votes', 0)}|{member.get('hidden', False)}|{member.get('secondaryDelaySecs', 0)}|\n"
-                )
-            f.write("\n")
-            if rs_config is not None:
-                f.write("```json\n")
-                f.write(to_json(rs_config, indent=4))
-                f.write("\n```\n\n")
-        command_line_options = self._cache.get("command_line_options", None)
-        if command_line_options:
-            f.write("### Command Line Options\n\n")
-            f.write('<div id="cmd_options">\n')
-            f.write("```json\n")
-            f.write(to_json(command_line_options, indent=4))
-            f.write("\n```\n\n")
-            f.write("</div>\n")
+        parser = InfoParser()
+        f.write(parser.markdown(self._cache))
