@@ -55,10 +55,12 @@ class ClientMetaItem(BaseItem):
             "os": attr["doc"].get("os", {}),
             "platform": attr["doc"].get("platform", ""),
         }
-        # Exclude automation agent and internal network driver connections — dominates the chart
+        # Exclude automation agent connections — they dominate the chart.
+        # Internal drivers (e.g. NetworkInterfaceTL, MongoDB Internal Client) are still collected
+        # here so they appear in the results table; they are just ignored by the
+        # compatibility check (see is_driver_compatible).
         app_name = doc["application"].get("name", "").lower()
-        driver_name = doc["driver"].get("name", "")
-        if "automation" in app_name or driver_name.startswith("NetworkInterfaceTL"):
+        if "automation" in app_name:
             return
         doc_hash = json_hash(doc)
         if doc_hash not in self._cache:
@@ -140,6 +142,11 @@ class ClientMetaItem(BaseItem):
 
 
 def is_driver_compatible(log_driver_name: str, log_driver_version: str, server_version: Version, matrix) -> bool:
+    # Internal drivers used by MongoDB itself (e.g. NetworkInterfaceTL, NetworkInterfaceTL-ReplNetwork,
+    # MongoDB Internal Client) are not user-facing drivers, so they are not in the compatibility matrix.
+    # Ignore them in the compatibility check, but they are still displayed in the results table.
+    if "NetworkInterfaceTL" in log_driver_name or log_driver_name == "MongoDB Internal Client":
+        return True
     if not server_version or log_driver_version == "Unknown":
         # If can't determine server version, assume compatible.
         # But log a warning and display a message on the report.

@@ -8,6 +8,7 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
+import io
 import json
 
 from bson import json_util
@@ -29,6 +30,9 @@ LOGS = [
         '{"t":{"$date":"2025-09-25T23:39:51.400+02:00"},"s":"I",  "c":"NETWORK",  "id":51800,   "ctx":"conn4","msg":"client metadata","attr":{"remote":"192.168.0.1:51014","client":"conn4","doc":{"driver":{"name":"NetworkInterfaceTL-ReplNetwork","version":"7.0.37"},"os":{"type":"Darwin","name":"Mac OS X","architecture":"x86_64","version":"24.6.0"}}}}'
     ),
     json_util.loads(
+        '{"t":{"$date":"2025-09-25T23:39:51.800+02:00"},"s":"I",  "c":"NETWORK",  "id":51800,   "ctx":"conn7","msg":"client metadata","attr":{"remote":"192.168.0.4:51040","client":"conn7","doc":{"driver":{"name":"MongoDB Internal Client","version":"7.0.2"},"os":{"type":"Darwin","name":"Mac OS X","architecture":"x86_64","version":"24.6.0"}}}}'
+    ),
+    json_util.loads(
         '{"t":{"$date":"2025-09-25T23:39:51.993+02:00"},"s":"I",  "c":"NETWORK",  "id":51800,   "ctx":"conn5","msg":"client metadata","attr":{"remote":"192.168.0.2:51028","client":"conn5","doc":{"driver":{"name":"PyMongo|c","version":"4.14.1"},"os":{"type":"Darwin","name":"Darwin","architecture":"arm64","version":"15.7"},"platform":"CPython 3.11.12.final.0","application":{"name":"mlaunch v1.7.2"}}}}'
     ),
     json_util.loads(
@@ -47,8 +51,18 @@ def test_client_metadata_item():
         item.analyze(log)
     item.finalize_analysis()
 
-    assert len(output) == 1
-    result = output[0]
+    assert len(output) == 4
+    # Internal drivers are still collected so they show up in the results table
+    assert output[0]["doc"]["driver"]["name"] == "NetworkInterfaceTL"
+    assert output[0]["ips"][0]["ip"] == "192.168.0.1"
+    assert output[0]["ips"][0]["count"] == 1
+    assert output[1]["doc"]["driver"]["name"] == "NetworkInterfaceTL-ReplNetwork"
+    assert output[1]["ips"][0]["ip"] == "192.168.0.1"
+    assert output[1]["ips"][0]["count"] == 1
+    assert output[2]["doc"]["driver"]["name"] == "MongoDB Internal Client"
+    assert output[2]["ips"][0]["ip"] == "192.168.0.4"
+    assert output[2]["ips"][0]["count"] == 1
+    result = output[3]
     assert result["doc"]["driver"]["name"] == "PyMongo|c"
     assert result["ips"][0]["ip"] == "192.168.0.2"
     assert result["ips"][0]["count"] == 2
@@ -108,3 +122,30 @@ def test_is_driver_compatible():
         assert is_compatible == expected, (
             f"Expected compatibility {expected} for driver {log['name']}, got {is_compatible}"
         )
+    # Internal drivers (whose name *contains* NetworkInterfaceTL, or is exactly
+    # "MongoDB Internal Client") are ignored by the compatibility check, so they are
+    # never flagged as incompatible.
+    assert is_driver_compatible("NetworkInterfaceTL-ReplNetwork", "7.0.37", server_version, matrix_70) is True
+    assert is_driver_compatible("MongoDB Internal Client", "7.0.2", server_version, matrix_70) is True
+
+
+def test_internal_drivers_still_displayed_in_results_table(tmp_path):
+    # Internal drivers are ignored by the compatibility check, but the results table must
+    # still show them (not red, since they are never flagged as incompatible).
+    item = ClientMetaItem(output_folder=str(tmp_path), config={})
+    item._server_version = Version.parse("7.0.0")
+    for log in LOGS:
+        item.analyze(log)
+    item.finalize_analysis()
+
+    buf = io.StringIO()
+    item.review_results_markdown(buf)
+    md = buf.getvalue()
+
+    # All internal drivers are still displayed as table rows
+    assert "|NetworkInterfaceTL 5.0.14|" in md
+    assert "|NetworkInterfaceTL-ReplNetwork 7.0.37|" in md
+    assert "|MongoDB Internal Client 7.0.2|" in md
+    # ... and they are not marked red as incompatible
+    assert '<span style="color:red;">NetworkInterfaceTL' not in md
+    assert '<span style="color:red;">MongoDB Internal Client' not in md
