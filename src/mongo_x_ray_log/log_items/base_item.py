@@ -13,6 +13,7 @@ import os
 from typing import Any, Optional
 
 from bson import json_util
+
 from mongo_x_ray.shared import to_json
 from mongo_x_ray.utils import get_script_path, to_ejson
 from mongo_x_ray.version import Version

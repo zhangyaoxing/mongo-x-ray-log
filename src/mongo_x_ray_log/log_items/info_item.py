@@ -9,7 +9,6 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
 from mongo_x_ray.shared import to_json
-
 from mongo_x_ray_log.log_items.base_item import BaseItem
 
 

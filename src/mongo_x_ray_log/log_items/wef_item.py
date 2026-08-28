@@ -12,8 +12,8 @@ import html as html_mod
 from random import randint
 
 from bson import json_util
-from mongo_x_ray.utils import bold, env, escape_markdown, green, yellow
 
+from mongo_x_ray.utils import bold, env, escape_markdown, green, yellow
 from mongo_x_ray_log.log_items.base_item import BaseItem
 
 
@@ -50,7 +50,6 @@ class WEFItem(BaseItem):
         if self._ai_support == "gpt":
             try:
                 from mongo_x_ray.ai_client import GPT_MODEL
-
                 from mongo_x_ray_log.ai import analyze_log_line_gpt
 
                 if env == "development":

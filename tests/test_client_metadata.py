@@ -12,8 +12,8 @@ import io
 import json
 
 from bson import json_util
-from mongo_x_ray.version import Version
 
+from mongo_x_ray.version import Version
 from mongo_x_ray_log.log_items.client_meta_item import (
     COMPATIBILITY_MATRIX_JSON,
     ClientMetaItem,

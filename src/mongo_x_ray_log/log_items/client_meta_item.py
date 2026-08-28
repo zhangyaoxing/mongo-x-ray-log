@@ -14,6 +14,7 @@ from re import search, split
 from typing import Optional
 
 from bson import json_util
+
 from mongo_x_ray.utils import (
     escape_markdown,
     get_script_path,
@@ -24,7 +25,6 @@ from mongo_x_ray.utils import (
     yellow,
 )
 from mongo_x_ray.version import Version
-
 from mongo_x_ray_log.log_items.base_item import BaseItem
 
 COMPATIBILITY_MATRIX_JSON = files("mongo_x_ray") / "compatibility_matrix.json"
