@@ -14,9 +14,9 @@ import json
 from bson import json_util
 
 from mongo_x_ray.version import Version
-from mongo_x_ray_log.log_items.client_meta_item import (
+from mongo_x_ray_log.log_items.client_meta_item import ClientMetaItem
+from mongo_x_ray_log.rules.driver_compatibility_rule import (
     COMPATIBILITY_MATRIX_JSON,
-    ClientMetaItem,
     is_driver_compatible,
     parse_version_from_log,
 )
@@ -149,3 +149,5 @@ def test_internal_drivers_still_displayed_in_results_table(tmp_path):
     # ... and they are not marked red as incompatible
     assert '<span style="color:red;">NetworkInterfaceTL' not in md
     assert '<span style="color:red;">MongoDB Internal Client' not in md
+    # ... and they do not produce test results
+    assert item._test_result == []

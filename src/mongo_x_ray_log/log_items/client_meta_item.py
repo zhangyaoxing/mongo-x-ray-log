@@ -8,39 +8,21 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
-import json
-from importlib.resources import files
-from re import search, split
-from typing import Optional
-
-from bson import json_util
-
-from mongo_x_ray.utils import (
-    escape_markdown,
-    get_script_path,
-    json_hash,
-    logger,
-    tooltip_html,
-    truncate_content,
-    yellow,
-)
-from mongo_x_ray.version import Version
+from mongo_x_ray.utils import json_hash
 from mongo_x_ray_log.log_items.base_item import BaseItem
-
-COMPATIBILITY_MATRIX_JSON = files("mongo_x_ray") / "compatibility_matrix.json"
+from mongo_x_ray_log.parsers.client_meta_parser import ClientMetaParser
+from mongo_x_ray_log.rules.driver_compatibility_rule import DriverCompatibilityRule
 
 
 class ClientMetaItem(BaseItem):
     """Client Metadata Log Item checks for client metadata in the log."""
-
-    _driver_matrix = None
 
     def __init__(self, output_folder: str, config):
         super().__init__(output_folder, config)
         self._cache = {}
         self.name = "Client Metadata"
         self.description = "Visualize client metadata."
-        self._cache = {}
+        self._rules["driver_compatibility"] = DriverCompatibilityRule(config)
 
     def analyze(self, log_line):
         super().analyze(log_line)
@@ -58,7 +40,7 @@ class ClientMetaItem(BaseItem):
         # Exclude automation agent connections — they dominate the chart.
         # Internal drivers (e.g. NetworkInterfaceTL, MongoDB Internal Client) are still collected
         # here so they appear in the results table; they are just ignored by the
-        # compatibility check (see is_driver_compatible).
+        # compatibility check (see DriverCompatibilityRule).
         app_name = doc["application"].get("name", "").lower()
         if "automation" in app_name:
             return
@@ -77,130 +59,13 @@ class ClientMetaItem(BaseItem):
             cache.append({"doc": doc, "ips": ips})
         self._cache = cache
         super().finalize_analysis()
-        # Based on the server version, find out minimum compatible driver versions.
-        matrix_path = get_script_path(COMPATIBILITY_MATRIX_JSON)
-        with open(matrix_path, "r", encoding="utf-8") as f:
-            compatibility_matrix = json.load(f)
-        server_compatible_version = self._server_version.to_compatibility_str() if self._server_version else "Unknown"
-        driver_matrix = compatibility_matrix.get(server_compatible_version, {})
-        self._driver_matrix = {k: Version(v) for k, v in driver_matrix.items()}
+        # Apply the rules to generate the test results (e.g. driver version incompatibility).
+        for rule in self._rules.values():
+            test_result, _ = rule.apply(
+                cache, server_version=self._server_version, extra_info={"host": self._hostname or "unknown"}
+            )
+            self.append_test_results(test_result)
 
     def review_results_markdown(self, f):
-        super().review_results_markdown(f)
-        f.write("|Application|Driver|OS|Platform|Client IPs|\n")
-        f.write("|---|---|---|---|---|\n")
-        rows = []
-        with open(self._output_file, "r", encoding="utf-8") as data:
-            for line in data:
-                line_json = json_util.loads(line)
-                doc = line_json.get("doc", {})
-                full_app = doc.get("application", {}).get("name", "Unknown")
-                trunc_app = truncate_content(full_app)
-                app_html = (
-                    tooltip_html(escape_markdown(full_app), escape_markdown(trunc_app))
-                    if full_app != trunc_app
-                    else escape_markdown(full_app)
-                )
-                driver = doc.get("driver", {})
-                driver_name = driver.get("name", "Unknown")
-                driver_version = driver.get("version", "Unknown")
-                full_driver = escape_markdown(f"{driver_name} {driver_version}")
-                is_compatible = self._server_version is None or is_driver_compatible(
-                    driver_name,
-                    driver_version,
-                    self._server_version,
-                    self._driver_matrix,
-                )
-                if not is_compatible:
-                    full_driver = f'<span style="color:red;">{full_driver}</span>'
-                os = doc.get("os", {})
-                os_type = os.get("type", "Unknown")
-                os_name = os.get("name", "Unknown")
-                os_arch = os.get("architecture", "Unknown")
-                os_version = os.get("version", "Unknown")
-                os_str = escape_markdown(
-                    f"{os_name if os_name != 'Unknown' else os_type} {os_arch} {os_version if os_version != 'Unknown' else ''}"
-                )
-                platform = escape_markdown(doc.get("platform", "Unknown"))
-                ips = [f"{ip['ip']} ({ip['count']} times)" for ip in line_json["ips"]]
-                ips_html = tooltip_html(", ".join(ips), f"{ips[0]} {'...' if len(ips) > 1 else ''}")
-                rows.append([app_html, full_driver, os_str, platform, ips_html])
-        # Sort by Application name, then driver name
-        sorted_rows = sorted(rows, key=lambda x: (x[0].lower(), x[1].lower()))
-        for row in sorted_rows:
-            f.write("|".join(row) + "\n")
-        if self._server_version:
-            f.write(
-                f'\n**Drivers that doesn\'t support current MongoDB <span style="color: red;">{self._server_version}</span> are marked <span style="color:red;">RED</span>. Reference: [Compatibility Matrix](https://www.mongodb.com/docs/drivers/compatibility/)**\n'
-            )
-        else:
-            f.write(
-                '\n**<span style="color: red;">Unable to determine server version to mark incompatible drivers. Log may be truncated by user.</span>**\n'
-            )
-        f.write(f"<div class=\"pie100\"><canvas id='canvas_{self.__class__.__name__}'></canvas></div>\n")
-        f.write(f"<div class=\"pie100\"><canvas id='canvas_{self.__class__.__name__}_ip'></canvas></div>\n")
-
-
-def is_driver_compatible(log_driver_name: str, log_driver_version: str, server_version: Version, matrix) -> bool:
-    # Internal drivers used by MongoDB itself (e.g. NetworkInterfaceTL, NetworkInterfaceTL-ReplNetwork,
-    # MongoDB Internal Client) are not user-facing drivers, so they are not in the compatibility matrix.
-    # Ignore them in the compatibility check, but they are still displayed in the results table.
-    if "NetworkInterfaceTL" in log_driver_name or log_driver_name == "MongoDB Internal Client":
-        return True
-    if not server_version or log_driver_version == "Unknown":
-        # If can't determine server version, assume compatible.
-        # But log a warning and display a message on the report.
-        logger.warning(
-            yellow(f"Cannot determine compatibility for driver version: {log_driver_name} {log_driver_version}")
-        )
-        return True
-    try:
-        # Check which driver name appeared in the log_driver_name. That's the driver we need.
-        driver_name = None
-        min_version = None
-        for k, v in matrix.items():
-            if k in log_driver_name:
-                # Some drivers uses other drivers internally
-                # E.g. PHP uses the C driver, Scala uses the Java driver
-                # The sequence matters here, so we take the last match
-                driver_name = k
-                min_version = v
-
-        assert driver_name is not None, (
-            f"Driver name not found in compatibility matrix for log driver name: {log_driver_name}"
-        )
-        assert min_version is not None, (
-            f"Minimum driver version not found for driver: {driver_name} in compatibility matrix"
-        )
-        driver_ver = parse_version_from_log(log_driver_name, log_driver_version, driver_name)
-        return not driver_ver or driver_ver >= min_version
-    except Exception as e:
-        logger.warning("Failed to parse driver version: %s, error: %s", log_driver_version, e)
-        return True
-
-
-def parse_version_from_log(driver_name: str, driver_version: str, target_driver_name: str) -> Optional[Version]:
-    """Parse driver version from log line"""
-    # Driver version from the log can have different forms. Some examples are:
-    #  - {"name":"mongo-csharp-driver","version":"2.21.0.0"}
-    #  - {"name":"mongo-java-driver|sync","version":"3.12.10"}
-    #  - {"name":"mongoc / mongocxx","version":"1.26.3 / 3.8.1"}
-    #  - {"name":"mongoc / ext-mongodb:PHP / PHPLIB/symfony-mongodb ","version":"1.25.2 / 1.17.2 / 1.17.0/2.6.1 "}
-    #  - {"name":"mongo-java-driver|mongo-scala-driver","version":"unknown|2.3.0"}
-    #  - {"name":"mongo-go-driver","version":"v1.12.0-cloud"}
-    # We need to extract the relevant part for comparison.
-    # Some drivers are internal only, e.g., NetworkInterfaceTL, we skip those.
-    #  - {"name":"NetworkInterfaceTL","version":"5.0.31"}
-    name_parts = [part.strip(" ") for part in split("[|/]", driver_name)]
-    version_parts = [part.strip(" ") for part in split("[|/]", driver_version)]
-    for name_part, version_part in zip(name_parts, version_parts):
-        if name_part == target_driver_name:
-            version = search(r"\d+(\.\d+)*", version_part.strip())
-            return Version.parse(version.group(0) if version else None)
-    # Because | is used both as delimiter and in driver names, we need to do one more check
-    # Drivers like mongo-java-driver|sync will go here if not matched above
-    if target_driver_name == driver_name:
-        version = search(r"\d+(\.\d+)*", driver_version.strip())
-        return Version.parse(version.group(0) if version else None)
-
-    return None
+        parser = ClientMetaParser()
+        f.write(parser.markdown(self._cache, server_version=self._server_version))

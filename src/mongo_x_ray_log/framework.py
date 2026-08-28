@@ -18,7 +18,7 @@ from typing import Optional, TextIO
 from bson import json_util
 
 from mongo_x_ray.framework import BaseFramework
-from mongo_x_ray.shared import to_json
+from mongo_x_ray.shared import str_to_md_id, to_json
 from mongo_x_ray.utils import bold, cyan, env, green, load_classes, yellow
 from mongo_x_ray_log.log_items.info_item import InfoItem
 from mongo_x_ray_log.log_items.state_trace_item import StateTraceItem
@@ -274,6 +274,7 @@ class Framework(BaseFramework):
 
         self._log_end = log_line.get("t", None) if log_line else None
         for item in self._items:
+            item._hostname = self._hostname
             try:
                 item.finalize_analysis()
             except Exception as e:
@@ -296,7 +297,28 @@ class Framework(BaseFramework):
         output.write("- **zoom in/out:** _ctrl+wheel, or pinch_\n")
         output.write("- **pan:** _shift+drag_\n")
         output.write("- **select time frame:** _drag_\n\n")
-        for item in self._items:
+
+        output.write("## 1 Review Test Results\n\n")
+        for i, item in enumerate(self._items):
+            title = f"1.{i + 1} {item.name}"
+            review_title = f"2.{i + 1} Review {item.name}"
+            review_title_id = str_to_md_id(review_title)
+            output.write(f"### {title}\n\n")
+            output.write(f"{item.description}\n\n")
+            output.write(f"[Review Raw Results &rarr;](#{review_title_id})\n\n")
+            try:
+                item.test_result_markdown(output)
+            except Exception as e:
+                self._logger.warning(yellow(f"Failed to generate test results for log item '{item.name}': {e}"))
+                continue
+
+        output.write("## 2 Review Raw Results\n\n")
+        for i, item in enumerate(self._items):
+            title = f"1.{i + 1} {item.name}"
+            title_id = str_to_md_id(title)
+            review_title = f"2.{i + 1} Review {item.name}"
+            output.write(f"### {review_title}\n\n")
+            output.write(f"[&larr; Review Test Results](#{title_id})\n\n")
             try:
                 item.review_results_markdown(output)
             except Exception as e:

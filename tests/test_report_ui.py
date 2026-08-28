@@ -102,7 +102,8 @@ def test_report_title(page):
 
 @pytest.mark.integration
 def test_all_sections_rendered(page):
-    headings = [h.inner_text() for h in page.locator("h2").all()]
+    # Item sections are h3 headings under "1 Review Test Results" / "2 Review Raw Results"
+    headings = [h.inner_text() for h in page.locator("h2, h3").all()]
     for section in EXPECTED_SECTIONS:
         assert section in headings, f"Missing report section: {section}"
 

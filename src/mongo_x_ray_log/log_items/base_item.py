@@ -8,15 +8,17 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
+import html as html_mod
 import logging
 import os
 from typing import Any, Optional
 
 from bson import json_util
 
-from mongo_x_ray.shared import to_json
+from mongo_x_ray.shared import SEVERITY, to_json
 from mongo_x_ray.utils import get_script_path, to_ejson
 from mongo_x_ray.version import Version
+from mongo_x_ray_log.rules.base_rule import BaseRule
 
 
 def get_version(log_line):
@@ -32,6 +34,16 @@ def get_version(log_line):
     return Version.parse(version)
 
 
+def colorize_severity(severity: SEVERITY) -> str:
+    mapping = {
+        SEVERITY.HIGH.name: "red",
+        SEVERITY.MEDIUM.name: "orange",
+        SEVERITY.LOW.name: "green",
+        SEVERITY.INFO.name: "gray",
+    }
+    return mapping.get(severity.name, "black")
+
+
 class BaseItem:
     _cache: Any = None
 
@@ -42,6 +54,9 @@ class BaseItem:
         self._row_count: int = 0
         self._show_reset: bool = kwargs.get("show_reset", False)
         self._server_version: Optional[Version] = None
+        self._hostname: Optional[str] = None
+        self._test_result: list = []
+        self._rules: dict[str, BaseRule] = {}
         if os.path.isfile(self._output_file):
             os.remove(self._output_file)
 
@@ -69,15 +84,60 @@ class BaseItem:
     def finalize_analysis(self) -> None:
         self._write_output()
 
+    def test_result_markdown(self, output) -> None:
+        """Write the test results (issues found by the item's rules) to *output*."""
+        if len(self._test_result) == 0:
+            output.write("<b style='color: green;'>Pass.</b>\n\n")
+            return
+
+        output.write(
+            '| <span data-sortable="false">\\#</span>{60px}'
+            ' | <span data-sortable="true">Host</span>{180px}'
+            ' | <span data-sortable="true">Severity</span>{120px}'
+            ' | <span data-sortable="true">Category</span>{200px}'
+            ' | <span data-sortable="false">Message</span>{*} |\n'
+        )
+        output.write("|:----------:|:----------:|:----------:|---------|---------|\n")
+        for idx, item in enumerate(self._test_result):
+            severity = item["severity"]
+            severity_cell = (
+                f'<span data-sort-value="{severity.value}">'
+                f"<b style='color: {colorize_severity(severity)}'>"
+                f" {severity.name} </b></span>"
+            )
+            category_cell = item["title"]
+            risk = item.get("matched_risk")
+            if risk:
+                risk_id = html_mod.escape(str(risk.get("id", "")))
+                risk_name = html_mod.escape(str(risk.get("name", ""))).replace("\r\n", "<br>").replace("\n", "<br>")
+                risk_desc = (
+                    html_mod.escape(str(risk.get("description", ""))).replace("\r\n", "<br>").replace("\n", "<br>")
+                )
+                category_cell += (
+                    f' <span class="risk-badge">RISK-{risk_id}'
+                    f'<span class="risk-tooltip">'
+                    f'<span class="risk-name">{risk_name}</span>'
+                    f"{risk_desc}"
+                    f"</span></span>"
+                )
+            output.write(
+                f"| **{idx + 1}** | `{item['host']}` | {severity_cell} | {category_cell} | {item['message']} |\n"
+            )
+        output.write("\n")
+
+    def append_test_result(self, host: str, severity: SEVERITY, title: str, message: str) -> None:
+        self._test_result.append({"host": host, "severity": severity, "title": title, "message": message})
+
+    def append_test_results(self, items: list) -> None:
+        for item in items:
+            self.append_test_result(item["host"], item["severity"], item["title"], item["description"])
+
     def review_results_markdown(self, f) -> None:
         # Write JS snippet to the file
         file_name = f"{self.__class__.__name__}.js"
         file_path = os.path.join("templates", "log", "snippets", file_name)
         file_path = get_script_path(file_path, package="mongo_x_ray_log")
         self._logger.debug("Using JS snippet file: %s", file_path)
-
-        f.write(f"## {self.name}\n\n")
-        f.write(f"{self.description}\n\n")
 
         if self._show_reset:
             f.write(
