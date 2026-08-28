@@ -9,4 +9,3 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 
 MongoDB log analysis package.
 """
-
