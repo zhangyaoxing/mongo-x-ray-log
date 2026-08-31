@@ -1,6 +1,7 @@
 # mongo-x-ray-log
 
 [![CI](https://github.com/zhangyaoxing/mongo-x-ray-log/actions/workflows/ci.yml/badge.svg)](https://github.com/zhangyaoxing/mongo-x-ray-log/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/mongo-x-ray-log.svg)](https://pypi.org/project/mongo-x-ray-log/)
 
 MongoDB log analysis plugin for [x-ray](https://github.com/mongodb-ps/ce-mongo-x-ray).
 
