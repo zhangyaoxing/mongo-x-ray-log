@@ -298,6 +298,20 @@ class Framework(BaseFramework):
         output.write("- **pan:** _shift+drag_\n")
         output.write("- **select time frame:** _drag_\n\n")
 
+        # Enrich the test results with matched risks from the risk register so
+        # the issue table can show the RISK badge (like the other modules).
+        try:
+            from mongo_x_ray_risk import enrich_test_results, has_risks
+
+            if has_risks():
+                matched = 0
+                for item in self._items:
+                    matched += enrich_test_results(item._test_result)
+                if matched:
+                    self._logger.info(green(f"Matched {matched} issues to known risks"))
+        except Exception:
+            self._logger.debug("Risk register matching not available", exc_info=True)
+
         output.write("## 1 Review Test Results\n\n")
         for i, item in enumerate(self._items):
             title = f"1.{i + 1} {item.name}"
