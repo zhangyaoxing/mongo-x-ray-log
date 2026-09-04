@@ -12,6 +12,7 @@ from mongo_x_ray.utils import json_hash
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.top_slow_parser import TopSlowParser
 from mongo_x_ray_log.query_analyzer import analyze_query_pattern
+from mongo_x_ray_log.rules.slow_operations_rule import SlowOperationsRule
 
 
 class TopSlowItem(BaseItem):
@@ -25,6 +26,7 @@ class TopSlowItem(BaseItem):
         self.name = "Top Slow Operations"
         self.description = f"Identify the top `{self._top_n}` slowest operations from the log entries."
         self._cache = {}
+        self._rules["slow_operations"] = SlowOperationsRule(config)
 
     def analyze(self, log_line):
         log_id = log_line.get("id", "")
@@ -74,6 +76,10 @@ class TopSlowItem(BaseItem):
         self._cache = list(sorted(self._cache.values(), key=lambda item: item["count"], reverse=True)[: self._top_n])
         # self._cache = list(sorted(self._cache.values(), key=lambda item: item["duration"], reverse=True)[:self._top_n])
         super().finalize_analysis()
+        # Apply the rules to generate the test results (e.g. collection scans, poor query targeting).
+        for rule in self._rules.values():
+            test_result, _ = rule.apply(self._cache, extra_info={"host": self._hostname or "unknown"})
+            self.append_test_results(test_result)
 
     def review_results_markdown(self, f):
         parser = TopSlowParser()

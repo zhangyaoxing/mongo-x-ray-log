@@ -138,7 +138,7 @@ def test_wef_table_has_rows(page):
 def test_top_slow_table_has_rows(page):
     # The TopSlow table only has rows when the log contains slow queries on
     # non-system namespaces; otherwise the section shows "No data available."
-    table = page.locator("table", has_text="Plan Summary")
+    table = page.locator("table:has(th:text-is('Plan Summary'))")
     assert table.count() <= 1
     if table.count() == 1:
         assert table.locator("tbody tr").count() >= 1
