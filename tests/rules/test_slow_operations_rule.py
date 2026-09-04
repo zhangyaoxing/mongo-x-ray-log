@@ -86,3 +86,41 @@ def test_slow_operations_rule_custom_threshold_from_config():
     data = [_record(plan_summary="IXSCAN { x: 1 }", keys_examined=500, n_returned=10, docs_examined=500)]
     test_results, _ = rule.apply(data, extra_info={"host": "test-host"})
     assert _titles(test_results) == ["Poor Query Targeting", "Poor Query Targeting (Objects)"]
+
+
+def test_slow_operations_rule_escalates_targeting_over_5000_to_high():
+    rule = SlowOperationsRule({})
+    # 6000 keys examined for 1 returned document > high threshold 5000
+    data = [_record(plan_summary="IXSCAN { type: 1 }", keys_examined=6000, n_returned=1, docs_examined=2)]
+    test_results, _ = rule.apply(data, extra_info={"host": "test-host"})
+    assert _titles(test_results) == ["Poor Query Targeting"]
+    issue = test_results[0]
+    assert issue["severity"] == SEVERITY.HIGH
+    assert "critical threshold" in issue["description"]
+
+
+def test_slow_operations_rule_targeting_at_5000_stays_medium():
+    rule = SlowOperationsRule({})
+    # Exactly 5000 keys examined for 1 returned document: MEDIUM, not HIGH
+    data = [_record(plan_summary="IXSCAN { type: 1 }", keys_examined=5000, n_returned=1, docs_examined=2)]
+    test_results, _ = rule.apply(data, extra_info={"host": "test-host"})
+    assert len(test_results) == 1
+    assert test_results[0]["severity"] == SEVERITY.MEDIUM
+
+
+def test_slow_operations_rule_escalates_scanned_objects_over_5000_to_high():
+    rule = SlowOperationsRule({})
+    # 8000 objects examined for 1 returned document > high threshold 5000
+    data = [_record(plan_summary="IXSCAN { type: 1 }", keys_examined=10, n_returned=1, docs_examined=8000)]
+    test_results, _ = rule.apply(data, extra_info={"host": "test-host"})
+    assert _titles(test_results) == ["Poor Query Targeting (Objects)"]
+    assert test_results[0]["severity"] == SEVERITY.HIGH
+
+
+def test_slow_operations_rule_custom_high_threshold_from_config():
+    # A lower critical threshold configured via config.json
+    rule = SlowOperationsRule({"query_targeting_high": 500})
+    data = [_record(plan_summary="IXSCAN { x: 1 }", keys_examined=1000, n_returned=1, docs_examined=1)]
+    test_results, _ = rule.apply(data, extra_info={"host": "test-host"})
+    assert _titles(test_results) == ["Poor Query Targeting"]
+    assert test_results[0]["severity"] == SEVERITY.HIGH

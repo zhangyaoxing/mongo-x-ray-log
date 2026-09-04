@@ -14,6 +14,7 @@ from mongo_x_ray.shared import SEVERITY
 from mongo_x_ray_log.rules.base_rule import BaseRule
 
 DEFAULT_QUERY_TARGETING = 1000
+DEFAULT_QUERY_TARGETING_HIGH = 5000
 
 
 class SlowOperationsRule(BaseRule):
@@ -22,15 +23,36 @@ class SlowOperationsRule(BaseRule):
     Flags slow operations that:
     - use a collection scan (``planSummary`` is ``COLLSCAN``) — HIGH,
     - scan more than the configured threshold documents/keys per returned
-      document (poor query targeting) — MEDIUM.
+      document (poor query targeting) — MEDIUM, escalated to HIGH when the
+      ratio is more than the ``query_targeting_high`` threshold.
     """
 
     def __init__(self, config: Optional[dict] = None):
         super().__init__(config)
         self._max_query_targeting = self._thresholds.get("query_targeting", DEFAULT_QUERY_TARGETING)
         self._max_query_targeting_obj = self._thresholds.get("query_targeting_obj", DEFAULT_QUERY_TARGETING)
+        self._max_query_targeting_high = self._thresholds.get("query_targeting_high", DEFAULT_QUERY_TARGETING_HIGH)
         self._rule_desc.append("Checks if slow operations use collection scans (COLLSCAN).")
         self._rule_desc.append("Checks if the query targeting of slow operations is too high.")
+        self._rule_desc.append("Escalates extremely poor query targeting to HIGH severity.")
+
+    def _targeting_issue(self, host: str, query_hash: str, ns: str, ratio, threshold: float, high: bool) -> dict:
+        """Build a query targeting issue; *high* selects the severity tier."""
+        if high:
+            severity = SEVERITY.HIGH
+            wording = f"which is more than the critical threshold `{threshold}`"
+        else:
+            severity = SEVERITY.MEDIUM
+            wording = f"which is at or above the threshold `{threshold}`"
+        return {
+            "host": host,
+            "severity": severity,
+            "title": "Poor Query Targeting",
+            "description": (
+                f"Slow operation `{query_hash}` on `{ns}` has a scanned/returned ratio of "
+                f"`{ratio}`, {wording}. Consider adding an index to support the query."
+            ),
+        }
 
     def apply(self, data: list, **kwargs) -> tuple:
         """Check the aggregated top slow operations for issues.
@@ -64,38 +86,24 @@ class SlowOperationsRule(BaseRule):
                         ),
                     }
                 )
-            # 2. Poor query targeting is a MEDIUM severity issue
+            # 2. Poor query targeting: MEDIUM at/above the threshold, HIGH when
+            #    more than the critical (high) threshold.
             n_returned = record.get("n_returned", 0)
             keys_examined = record.get("keys_examined", 0)
             docs_examined = record.get("docs_examined", 0)
             scanned_per_returned = round(keys_examined / n_returned, 2) if n_returned > 0 else keys_examined
             scannedobj_per_returned = round(docs_examined / n_returned, 2) if n_returned > 0 else docs_examined
             if scanned_per_returned >= self._max_query_targeting:
-                test_results.append(
-                    {
-                        "host": host,
-                        "severity": SEVERITY.MEDIUM,
-                        "title": "Poor Query Targeting",
-                        "description": (
-                            f"Slow operation `{query_hash}` on `{ns}` has a scanned/returned ratio of "
-                            f"`{scanned_per_returned}`, which is at or above the threshold "
-                            f"`{self._max_query_targeting}`. Consider adding an index to support the query."
-                        ),
-                    }
-                )
+                high = scanned_per_returned > self._max_query_targeting_high
+                threshold = self._max_query_targeting_high if high else self._max_query_targeting
+                test_results.append(self._targeting_issue(host, query_hash, ns, scanned_per_returned, threshold, high))
             if scannedobj_per_returned >= self._max_query_targeting_obj:
-                test_results.append(
-                    {
-                        "host": host,
-                        "severity": SEVERITY.MEDIUM,
-                        "title": "Poor Query Targeting (Objects)",
-                        "description": (
-                            f"Slow operation `{query_hash}` on `{ns}` has a scanned objects/returned ratio of "
-                            f"`{scannedobj_per_returned}`, which is at or above the threshold "
-                            f"`{self._max_query_targeting_obj}`. Consider adding an index to support the query."
-                        ),
-                    }
-                )
+                high = scannedobj_per_returned > self._max_query_targeting_high
+                threshold = self._max_query_targeting_high if high else self._max_query_targeting_obj
+                issue = self._targeting_issue(host, query_hash, ns, scannedobj_per_returned, threshold, high)
+                issue["title"] = "Poor Query Targeting (Objects)"
+                issue["description"] = issue["description"].replace("scanned/returned", "scanned objects/returned")
+                test_results.append(issue)
         return test_results, data
 
 
