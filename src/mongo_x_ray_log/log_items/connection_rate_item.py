@@ -13,6 +13,7 @@ from datetime import datetime
 
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.connection_rate_parser import ConnectionRateParser
+from mongo_x_ray_log.rules.connection_rate_rule import ConnectionRateRule
 
 
 class ConnectionRateItem(BaseItem):
@@ -23,8 +24,10 @@ class ConnectionRateItem(BaseItem):
     def __init__(self, output_folder: str, config):
         super().__init__(output_folder, config, show_reset=True)
         self._cache = None
+        self._records = []
         self.name = "Connection Rate"
         self.description = "Analyse the rate of connections created and ended over a specified time window."
+        self._rules["connection_rate"] = ConnectionRateRule(config)
 
     def analyze(self, log_line):
         log_id = log_line.get("id", "")
@@ -40,6 +43,7 @@ class ConnectionRateItem(BaseItem):
         if self._cache.get("time", None) != time_min:
             if self._cache != {}:
                 self._write_output()
+                self._records.append(self._cache)
             self._cache = {
                 "time": time_min,
                 "created": 0,
@@ -55,6 +59,16 @@ class ConnectionRateItem(BaseItem):
         if ip not in self._cache["byIp"]:
             self._cache["byIp"][ip] = {"created": 0, "ended": 0}
         self._cache["byIp"][ip][counter] += 1
+
+    def finalize_analysis(self):
+        if self._cache:
+            self._records.append(self._cache)
+        super().finalize_analysis()
+        # Apply the rules to the collected per-minute buckets to generate the
+        # test results (e.g. high connection churn).
+        for rule in self._rules.values():
+            test_result, _ = rule.apply(self._records, extra_info={"host": self._hostname or "unknown"})
+            self.append_test_results(test_result)
 
     def review_results_markdown(self, f):
         parser = ConnectionRateParser()
