@@ -273,8 +273,9 @@ class Framework(BaseFramework):
                         continue
 
         self._log_end = log_line.get("t", None) if log_line else None
+        hostname = self.hostname
         for item in self._items:
-            item._hostname = self._hostname
+            item._hostname = hostname
             try:
                 item.finalize_analysis()
             except Exception as e:
