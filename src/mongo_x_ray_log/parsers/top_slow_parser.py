@@ -62,9 +62,9 @@ class TopSlowParser(BaseParser):
                 "header": [
                     {"width": "120px", "text": "Query Hash"},
                     {"width": "200px", "text": "Op"},
-                    {"width": "*", "text": "Pattern"},
-                    {"width": "*", "text": "Details"},
-                    {"width": "200px", "text": "Plan Summary"},
+                    {"width": "*", "text": "Pattern", "align": "left"},
+                    {"width": "*", "text": "Details", "align": "left"},
+                    {"width": "200px", "text": "Plan Summary", "align": "left"},
                 ],
                 "rows": rows,
             },
