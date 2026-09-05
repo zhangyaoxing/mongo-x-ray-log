@@ -156,6 +156,31 @@ def test_reset_button_for_log_rate(page):
 
 
 @pytest.mark.integration
+def test_reset_buttons_reset_chart_zoom(page):
+    # Every reset button must reset the zoom of the chart(s) in its section.
+    # Spy on resetZoom of all rendered charts and click every reset button.
+    page.evaluate(
+        """() => {
+        window.__resetCalls = 0;
+        window.charts.forEach(ch => {
+            const orig = ch.resetZoom;
+            ch.resetZoom = function (...args) {
+                window.__resetCalls++;
+                return orig.apply(this, args);
+            };
+        });
+    }"""
+    )
+    buttons = page.locator('input[id^="reset_"]')
+    assert buttons.count() >= 1
+    for i in range(buttons.count()):
+        buttons.nth(i).click()
+    page.wait_for_timeout(100)
+    calls = page.evaluate("() => window.__resetCalls")
+    assert calls >= buttons.count()
+
+
+@pytest.mark.integration
 def test_copy_table_buttons_added(page):
     # addTableCopyButtons() wraps every table with a copy button once the
     # highlight.js CDN script has loaded (it runs at the end of script.js).
