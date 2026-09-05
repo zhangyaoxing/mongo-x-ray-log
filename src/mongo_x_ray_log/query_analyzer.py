@@ -147,11 +147,15 @@ def analyze_query_pattern(log_line):
         # A getMore slow query does not contain the query pattern itself: the
         # pattern lives in the originating command (the find/aggregate that
         # created the cursor), so it must be extracted from there. Depending on
-        # the log format it is nested under attr or under attr.command.
+        # the log format it is nested under attr or under attr.command. If no
+        # originating command is available, fall back to an empty pattern
+        # instead of failing.
         query_type = "getmore"
-        originating = attr.get("originatingCommand") or {}
-        if not originating and isinstance(command.get("originatingCommand"), dict):
-            originating = command["originatingCommand"]
+        originating = attr.get("originatingCommand")
+        if not isinstance(originating, dict):
+            originating = command.get("originatingCommand")
+        if not isinstance(originating, dict):
+            originating = {}
         if "aggregate" in originating:
             pipeline = originating.get("pipeline", [])
             first_stage = pipeline[0] if len(pipeline) > 0 else {}

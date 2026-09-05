@@ -182,3 +182,29 @@ def test_getmore_without_originating_command_has_empty_pattern():
     pattern = analyze_query_pattern(log)
     assert pattern["type"] == "getmore"
     assert pattern["pattern"] == {}
+
+
+def test_getmore_ignores_non_dict_originating_command():
+    # An originatingCommand that is not a dict must not crash the analysis;
+    # fall back to the command-level one, then to an empty pattern.
+    log = {
+        "id": 51803,
+        "msg": "Slow query",
+        "attr": {
+            "type": "command",
+            "originatingCommand": ["not", "a", "command"],
+            "command": {
+                "getMore": 123,
+                "collection": "pizzas",
+                "originatingCommand": {"find": "c", "filter": {"a": 1}},
+            },
+        },
+    }
+    pattern = analyze_query_pattern(log)
+    assert pattern["type"] == "getmore"
+    assert pattern["pattern"] == {"a": 1}
+
+    log["attr"]["command"].pop("originatingCommand")
+    pattern = analyze_query_pattern(log)
+    assert pattern["type"] == "getmore"
+    assert pattern["pattern"] == {}
