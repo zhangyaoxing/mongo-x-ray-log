@@ -133,3 +133,52 @@ def test_query_to_shape_no_operator():
     query = {}
     shape = query_to_pattern(query)
     assert shape == {}
+
+
+def _getmore_log(originating_command, nested_in_command=False):
+    command = {"getMore": 123456789, "collection": "pizzas", "batchSize": 1}
+    if nested_in_command:
+        command["originatingCommand"] = originating_command
+    attr = {"type": "command", "ns": "test.pizzas", "command": command}
+    if not nested_in_command:
+        attr["originatingCommand"] = originating_command
+    return {"t": "2026-09-05T00:00:00", "s": "I", "id": 51803, "msg": "Slow query", "attr": attr}
+
+
+def test_getmore_pattern_extracted_from_aggregate_originating_command():
+    # getMore of an aggregate cursor: the pattern is in originatingCommand.pipeline
+    originating = {
+        "aggregate": "pizzas",
+        "pipeline": [{"$match": {"size": {"$in": ["small", "medium", "large"]}}}],
+        "cursor": {},
+        "$db": "test",
+    }
+    pattern = analyze_query_pattern(_getmore_log(originating))
+    assert pattern["type"] == "getmore"
+    assert pattern["pattern"] == {"size": {"$in": 1}}
+
+
+def test_getmore_pattern_extracted_from_find_originating_command_with_sort():
+    originating = {"find": "pizzas", "filter": {"type": "pineapple"}, "sort": {"price": -1}}
+    pattern = analyze_query_pattern(_getmore_log(originating))
+    assert pattern["type"] == "getmore"
+    assert pattern["pattern"] == {"type": 1}
+    assert pattern["sort"] == {"price": -1}
+
+
+def test_getmore_pattern_extracted_when_originating_command_nested_in_command():
+    originating = {"find": "pizzas", "filter": {"size": "large"}}
+    pattern = analyze_query_pattern(_getmore_log(originating, nested_in_command=True))
+    assert pattern["type"] == "getmore"
+    assert pattern["pattern"] == {"size": 1}
+
+
+def test_getmore_without_originating_command_has_empty_pattern():
+    log = {
+        "id": 51803,
+        "msg": "Slow query",
+        "attr": {"type": "command", "command": {"getMore": 123, "collection": "pizzas"}},
+    }
+    pattern = analyze_query_pattern(log)
+    assert pattern["type"] == "getmore"
+    assert pattern["pattern"] == {}
