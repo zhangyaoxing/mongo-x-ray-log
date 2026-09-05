@@ -61,6 +61,8 @@ class SlowParser(BaseParser):
                 ]
             )
         return [
+            # Chart tabs block: the scatter charts first, fed with the raw log lines
+            {"type": "chart", "data": raw_lines},
             {
                 "type": "table",
                 "caption": "Top Slow Operations",
@@ -73,11 +75,10 @@ class SlowParser(BaseParser):
                 ],
                 "rows": rows,
             },
+            # The shared sample code block comes last
             {"type": "code", "language": "json", "code": "// Click query hash to display sample query..."},
             # Wiring chart block: attaches click handlers to the table anchors
             {"type": "chart", "data": top_n},
-            # Chart tabs block: the scatter charts, fed with the raw log lines
-            {"type": "chart", "data": raw_lines},
         ]
 
 
