@@ -47,7 +47,7 @@ class SlowParser(BaseParser):
                 "Avg Duration (ms)": avg_duration,
                 "Targeting": scanned_per_returned,
                 "Targeting (Obj)": scannedobj_per_returned,
-                "Has Sort": has_sort,
+                "Has Sort Stage": has_sort,
             }
             plan_summary = line_json.get("plan_summary", "N/A")
             plan_summary = escape_markdown(plan_summary if plan_summary != "" else "N/A")
