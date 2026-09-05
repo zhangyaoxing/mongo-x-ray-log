@@ -70,9 +70,9 @@ document.addEventListener('DOMContentLoaded', function() {
     canvas.className = 'bar';
     container.appendChild(wrapper);
     wrapper.appendChild(canvas);
-    // Give each member row enough height for its state bar on top of the title,
-    // legend and axis space, so the state segments stay readable.
-    let height = Object.keys(stateData).length * 55 + 200;
+    // Give each member 100px of row height (plus fixed space for the title,
+    // legend and axis) so the state segments stay readable.
+    let height = Object.keys(stateData).length * 100 + 200;
     canvas.style.height = `${height}px`;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
