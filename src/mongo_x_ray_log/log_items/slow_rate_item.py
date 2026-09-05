@@ -13,6 +13,7 @@ from datetime import datetime
 
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.slow_rate_parser import SlowRateParser
+from mongo_x_ray_log.rules.slow_rate_rule import SlowRateRule
 
 
 class SlowRateItem(BaseItem):
@@ -21,8 +22,10 @@ class SlowRateItem(BaseItem):
     def __init__(self, output_folder: str, config):
         super().__init__(output_folder, config, show_reset=True)
         self._cache = None
+        self._records = []
         self.name = "Slow Rate"
         self.description = "Analyse the rate of slow queries."
+        self._rules["slow_rate"] = SlowRateRule(config)
 
     def analyze(self, log_line):
         log_id = log_line.get("id", "")
@@ -36,6 +39,7 @@ class SlowRateItem(BaseItem):
             if self._cache is not None:
                 # New minute, write previous minute's data
                 self._write_output()
+                self._records.append(self._cache)
             # First time or new minute bucket
             self._cache = {"time": time_min, "total_slow_ms": 0, "count": 0, "byNs": {}}
 
@@ -48,6 +52,16 @@ class SlowRateItem(BaseItem):
             self._cache["byNs"][ns] = {"count": 0, "total_slow_ms": 0}
         self._cache["byNs"][ns]["count"] += 1
         self._cache["byNs"][ns]["total_slow_ms"] += slow_ms
+
+    def finalize_analysis(self):
+        if self._cache is not None:
+            self._records.append(self._cache)
+        super().finalize_analysis()
+        # Apply the rules to the collected per-minute buckets to generate the
+        # test results (e.g. significant slow queries).
+        for rule in self._rules.values():
+            test_result, _ = rule.apply(self._records, extra_info={"host": self._hostname or "unknown"})
+            self.append_test_results(test_result)
 
     def review_results_markdown(self, f):
         parser = SlowRateParser()
