@@ -10,28 +10,38 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 
 from mongo_x_ray.utils import json_hash
 from mongo_x_ray_log.log_items.base_item import BaseItem
-from mongo_x_ray_log.parsers.top_slow_parser import TopSlowParser
+from mongo_x_ray_log.parsers.slow_parser import SlowParser
 from mongo_x_ray_log.query_analyzer import analyze_query_pattern
 from mongo_x_ray_log.rules.slow_operations_rule import SlowOperationsRule
 
 
-class TopSlowItem(BaseItem):
-    """
-    Identify the top N slowest operations from the log entries.
+class SlowItem(BaseItem):
+    """Analyse the slow operations from the log entries.
+
+    Aggregates the top-N slowest query patterns (shown as a table with sample
+    viewers and checked by the slow operations rules) and keeps every raw slow
+    query line for the scatter charts (duration / scanned / scanned objects).
     """
 
     def __init__(self, output_folder: str, config):
-        super().__init__(output_folder, config)
+        super().__init__(output_folder, config, show_reset=True)
         self._top_n = config.get("top", 10)
-        self.name = "Top Slow Operations"
-        self.description = f"Identify the top `{self._top_n}` slowest operations from the log entries."
-        self._cache = {}
+        self._patterns: dict = {}
+        self._cache = None  # scratch buffer used to stream raw lines to the output file
+        self.name = "Slow Operations"
+        self.description = f"Identify the top `{self._top_n}` slowest operations and chart them over time."
         self._rules["slow_operations"] = SlowOperationsRule(config)
 
     def analyze(self, log_line):
         log_id = log_line.get("id", "")
         if log_id != 51803:  # Slow query
             return
+        # Stream the raw log line to the output file for the scatter charts.
+        self._cache = log_line
+        self._write_output()
+        self._cache = None
+
+        # Aggregate the query patterns for the top-N table.
         attr = log_line.get("attr", {})
         ns = attr.get("ns", "")
         # Skip system namespaces and system.* collections
@@ -51,11 +61,10 @@ class TopSlowItem(BaseItem):
             # Some command doesn't have queryHash, e.g., getMore
             # If so, we generate one based on the query shape and sort
             query_hash = json_hash(query_pattern, 4)
-            # query_hash = query_pattern.get("hash", "N/A") if query_pattern else "N/A"
-        slow_query = self._cache.get(query_hash, None)
+        slow_query = self._patterns.get(query_hash, None)
         if slow_query is None:
             slow_query = {}
-            self._cache[query_hash] = slow_query
+            self._patterns[query_hash] = slow_query
         slow_query.update(
             {
                 "query_hash": query_hash,
@@ -73,14 +82,20 @@ class TopSlowItem(BaseItem):
         )
 
     def finalize_analysis(self):
-        self._cache = list(sorted(self._cache.values(), key=lambda item: item["count"], reverse=True)[: self._top_n])
-        # self._cache = list(sorted(self._cache.values(), key=lambda item: item["duration"], reverse=True)[:self._top_n])
+        self._patterns = dict(
+            sorted(self._patterns.items(), key=lambda item: item[1]["count"], reverse=True)[: self._top_n]
+        )
+        # Persist the aggregated top-N records (appended after the raw lines)
+        # so they survive together with the chart data in the output file.
+        self._cache = list(self._patterns.values())
         super().finalize_analysis()
-        # Apply the rules to generate the test results (e.g. collection scans, poor query targeting).
+        # Apply the rules to generate the test results (e.g. collection scans,
+        # poor query targeting).
         for rule in self._rules.values():
             test_result, _ = rule.apply(self._cache, extra_info={"host": self._hostname or "unknown"})
             self.append_test_results(test_result)
 
     def review_results_markdown(self, f):
-        parser = TopSlowParser()
-        f.write(parser.markdown(self._load_records()))
+        records = self._load_records()
+        parser = SlowParser()
+        f.write(parser.markdown(records))

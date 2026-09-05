@@ -73,30 +73,45 @@ document.addEventListener('DOMContentLoaded', function() {
         };
     });
 
-    let highlighted = -1;
-    function onClick(event, activeElements) {
-        if (activeElements.length > 0) {
-            const datasetIndex = activeElements[0].datasetIndex;
-            const dataIndex = activeElements[0].index;
-            const dataset = this.data.datasets[datasetIndex];
-            const dataPoint = dataset.data[dataIndex];
-            const originalData = data[dataPoint.index];
-
-            if (highlighted === dataPoint.index) {
-                code.textContent = '// Click data points to review original log line...';
-                highlighted = -1;
-            } else {
-                code.textContent = JSON.stringify(originalData, null, 2);
-                highlighted = dataPoint.index;
-            }
-            delete code.dataset.highlighted;
-            hljs.highlightElement(code);
-            code.scrollIntoView({ behavior: 'smooth' });
+    // The sample viewer is the code block that precedes this container (shared
+    // with the top-N table above).
+    let sample = null;
+    for (let el = container.previousElementSibling; el; el = el.previousElementSibling) {
+        if (el.tagName === 'PRE' && el.querySelector('code')) {
+            sample = el.querySelector('code');
+            break;
         }
     }
+    if (sample) {
+        hljs.highlightElement(sample);
+    }
 
-    // Build the links, canvases and the sample viewer inside the container
+    let highlighted = -1;
+    function onClick(event, activeElements) {
+        if (!sample || activeElements.length === 0) {
+            return;
+        }
+        const datasetIndex = activeElements[0].datasetIndex;
+        const dataIndex = activeElements[0].index;
+        const dataset = this.data.datasets[datasetIndex];
+        const dataPoint = dataset.data[dataIndex];
+        const originalData = data[dataPoint.index];
+
+        if (highlighted === dataPoint.index) {
+            sample.textContent = '// Click data points to review original log line...';
+            highlighted = -1;
+        } else {
+            sample.textContent = JSON.stringify(originalData, null, 2);
+            highlighted = dataPoint.index;
+        }
+        delete sample.dataset.highlighted;
+        hljs.highlightElement(sample);
+        sample.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // Build the chart tab links and canvases inside the container
     const links = document.createElement('div');
+    links.className = 'chart-tabs';
     const linkItems = [
         { text: 'Duration Chart', id: 'duration' },
         { text: 'Scanned Chart', id: 'scanned' },
@@ -113,7 +128,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     container.appendChild(links);
 
-    const wrappers = [];
     const canvases = [];
     linkItems.forEach(item => {
         const wrapper = document.createElement('div');
@@ -121,43 +135,40 @@ document.addEventListener('DOMContentLoaded', function() {
         canvas.height = 200;
         wrapper.appendChild(canvas);
         container.appendChild(wrapper);
-        wrappers.push(wrapper);
         canvases.push(canvas);
-        canvas.id = 'canvas_' + item.id;
     });
     canvases[1].style.display = 'none';
     canvases[2].style.display = 'none';
 
-    // Sample viewer
-    const samplePre = document.createElement('pre');
-    const code = document.createElement('code');
-    code.className = 'language-json';
-    samplePre.appendChild(code);
-    container.appendChild(samplePre);
-    hljs.highlightElement(code);
+    const xScale = {
+        type: 'linear',
+        position: 'bottom',
+        title: {
+            display: true,
+            text: 'Time'
+        },
+        ticks: {
+            callback: function (t) {
+                const date = new Date(t);
+                const timeStr = date.toISOString().match(/(?<=T)[^\.Z]+/)[0];
+                return timeStr;
+            },
+            maxTicksLimit: 10
+        }
+    };
 
     const configDuration = {
         type: 'scatter',
-        data: {
-            datasets: dssDuration
-        },
+        data: { datasets: dssDuration },
         options: {
             responsive: true,
-            animation: {
-                duration: ANIMATION_DURATION
-            },
+            animation: { duration: ANIMATION_DURATION },
             plugins: {
-                title: {
-                    display: true,
-                    text: 'Slow Operations - Duration vs Time by Namespace'
-                },
+                title: { display: true, text: 'Slow Operations - Duration vs Time by Namespace' },
                 legend: {
                     display: true,
                     position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        generateLabels: genDefaultLegendLabels
-                    }
+                    labels: { usePointStyle: true, generateLabels: genDefaultLegendLabels }
                 },
                 tooltip: {
                     callbacks: {
@@ -178,59 +189,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 zoom: ZOOM_OPTIONS
             },
             scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    title: {
-                        display: true,
-                        text: 'Time'
-                    },
-                    ticks: {
-                        callback: function (t) {
-                            const date = new Date(t);
-                            const timeStr = date.toISOString().match(/(?<=T)[^\.Z]+/)[0];
-                            return timeStr;
-                        },
-                        maxTicksLimit: 10
-                    }
-                },
+                x: xScale,
                 y: {
-                    title: {
-                        display: true,
-                        text: 'Duration (milliseconds)'
-                    },
+                    title: { display: true, text: 'Duration (milliseconds)' },
                     beginAtZero: true
                 }
             },
-            interaction: {
-                mode: 'point',
-                intersect: false
-            },
+            interaction: { mode: 'point', intersect: false },
             onClick: onClick
         }
     };
+
     const configScanned = {
         type: 'scatter',
-        data: {
-            datasets: dssScanned
-        },
+        data: { datasets: dssScanned },
         options: {
             responsive: true,
-            animation: {
-                duration: ANIMATION_DURATION
-            },
+            animation: { duration: ANIMATION_DURATION },
             plugins: {
-                title: {
-                    display: true,
-                    text: 'Slow Operations - Scanned vs Time by Namespace'
-                },
+                title: { display: true, text: 'Slow Operations - Scanned vs Time by Namespace' },
                 legend: {
                     display: true,
                     position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        generateLabels: genDefaultLegendLabels
-                    }
+                    labels: { usePointStyle: true, generateLabels: genDefaultLegendLabels }
                 },
                 tooltip: {
                     callbacks: {
@@ -251,60 +232,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 zoom: ZOOM_OPTIONS
             },
             scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    title: {
-                        display: true,
-                        text: 'Time'
-                    },
-                    ticks: {
-                        callback: function (t) {
-                            const date = new Date(t);
-                            const timeStr = date.toISOString().match(/(?<=T)[^\.Z]+/)[0];
-                            return timeStr;
-                        },
-                        maxTicksLimit: 10
-                    }
-                },
+                x: xScale,
                 y: {
-                    title: {
-                        display: true,
-                        text: 'Scanned Keys'
-                    },
+                    title: { display: true, text: 'Scanned Keys' },
                     beginAtZero: true
                 }
             },
-            interaction: {
-                mode: 'point',
-                intersect: false
-            },
+            interaction: { mode: 'point', intersect: false },
             onClick: onClick
         }
     };
 
     const configScannedObj = {
         type: 'scatter',
-        data: {
-            datasets: dssScannedObj
-        },
+        data: { datasets: dssScannedObj },
         options: {
             responsive: true,
-            animation: {
-                duration: ANIMATION_DURATION
-            },
+            animation: { duration: ANIMATION_DURATION },
             plugins: {
-                title: {
-                    display: true,
-                    text: 'Slow Operations - Scanned Objects vs Time by Namespace'
-                },
+                title: { display: true, text: 'Slow Operations - Scanned Objects vs Time by Namespace' },
                 legend: {
                     display: true,
                     position: 'top',
-                    labels: {
-                        usePointStyle: true,
-                        generateLabels: genDefaultLegendLabels
-                    }
+                    labels: { usePointStyle: true, generateLabels: genDefaultLegendLabels }
                 },
                 tooltip: {
                     callbacks: {
@@ -325,34 +275,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 zoom: ZOOM_OPTIONS
             },
             scales: {
-                x: {
-                    type: 'linear',
-                    position: 'bottom',
-                    title: {
-                        display: true,
-                        text: 'Time'
-                    },
-                    ticks: {
-                        callback: function (t) {
-                            const date = new Date(t);
-                            const timeStr = date.toISOString().match(/(?<=T)[^\.Z]+/)[0];
-                            return timeStr;
-                        },
-                        maxTicksLimit: 10
-                    }
-                },
+                x: xScale,
                 y: {
-                    title: {
-                        display: true,
-                        text: 'Scanned Objects'
-                    },
+                    title: { display: true, text: 'Scanned Objects' },
                     beginAtZero: true
                 }
             },
-            interaction: {
-                mode: 'point',
-                intersect: false
-            },
+            interaction: { mode: 'point', intersect: false },
             onClick: onClick
         }
     };
@@ -370,14 +299,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const link = linkElements[i];
         link.addEventListener('click', function (event) {
             event.preventDefault();
-            // Hide all canvases first
             for (let j = 0; j < linkElements.length; j++) {
-                const canvas = canvases[j];
-                canvas.style.display = "none";
+                canvases[j].style.display = 'none';
                 linkElements[j].classList.remove('in-view');
             }
             const index = Array.prototype.indexOf.call(linkElements, this);
-            canvases[index].style.display = "block";
+            canvases[index].style.display = 'block';
             this.classList.add('in-view');
         });
     }

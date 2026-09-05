@@ -10,7 +10,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 
 from bson import json_util
 
-from mongo_x_ray_log.log_items.top_slow_item import TopSlowItem
+from mongo_x_ray_log.log_items.slow_item import SlowItem
 from tests.mocking import gen_mock_write_output
 
 LOGS = [
@@ -29,25 +29,50 @@ LOGS = [
 ]
 
 
-def test_top_slow_item():
-    item = TopSlowItem(output_folder="/tmp", config={})
+def test_slow_item_streams_raw_lines_and_writes_top_n(tmp_path):
+    item = SlowItem(output_folder=str(tmp_path), config={})
+    for log in LOGS:
+        item.analyze(log)
+    item.finalize_analysis()
+
+    records = item._load_records()
+    raw = [r for r in records if "query_hash" not in r]
+    aggregated = [r for r in records if "query_hash" in r]
+    # All raw slow lines are streamed (including system namespaces)...
+    assert len(raw) == 4
+    # ... while only non-system namespaces are aggregated into the top-N
+    assert len(aggregated) == 2
+    assert item._cache == aggregated
+
+    # Sorted by count descending
+    assert aggregated[0]["query_hash"] == "7178B674"
+    assert aggregated[0]["count"] == 2
+    assert aggregated[0]["duration"] == 50
+    assert aggregated[0]["ns"] == "Restaurant.pizzas"
+    assert aggregated[1]["query_hash"] == "904CC0B3"
+    assert aggregated[1]["count"] == 1
+
+
+def test_slow_item_applies_slow_operations_rules(tmp_path):
+    item = SlowItem(output_folder=str(tmp_path), config={})
+    for log in LOGS:
+        item.analyze(log)
+    item.finalize_analysis()
+
+    titles = [result["title"] for result in item._test_result]
+    # Both Restaurant.pizzas entries have COLLSCAN plan summaries
+    assert titles.count("Collection Scan Detected") == 2
+
+
+def test_slow_item_mock_output(tmp_path):
+    item = SlowItem(output_folder=str(tmp_path), config={})
     output, item._write_output = gen_mock_write_output(item)
     for log in LOGS:
         item.analyze(log)
     item.finalize_analysis()
 
-    # Slow query against admin/local/config dbs are ignored so only 2 entries expected
-    assert len(output) == 2
-    result = output[0]
-    assert result["query_hash"] == "7178B674"
-    assert result["query_pattern"]["type"] == "getmore"
-    assert result["count"] == 2
-    assert result["ns"] == "Restaurant.pizzas"
-    assert result["duration"] == 50
-
-    result = output[1]
-    assert result["query_hash"] == "904CC0B3"
-    assert result["query_pattern"]["type"] == "find"
-    assert result["count"] == 1
-    assert result["ns"] == "Restaurant.pizzas"
-    assert result["duration"] == 20
+    # 4 streamed raw lines + 2 aggregated records at finalize
+    assert len(output) == 6
+    assert output[0]["id"] == 51803
+    assert output[0]["attr"]["ns"] == "Restaurant.pizzas"
+    assert "query_hash" in output[4]

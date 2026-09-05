@@ -12,16 +12,21 @@ from mongo_x_ray.utils import escape_markdown, format_json_md
 from mongo_x_ray_log.parsers.base_parser import BaseParser
 
 
-class TopSlowParser(BaseParser):
-    """Render the top slow operations as an interactive table.
+class SlowParser(BaseParser):
+    """Render the slow operations: a top-N table with sample viewers and the
+    scatter charts (duration / scanned / scanned objects) shown as tabs.
 
-    The table rows link to the sample log lines; a chart block after the
-    table wires up the click handlers (see the TopSlowParser_3 snippet).
+    The output file mixes two record kinds: the raw slow query lines (streamed
+    during analysis, no top-level ``query_hash``) and the aggregated top-N
+    records (written at finalize, with a top-level ``query_hash``).
     """
 
     def parse(self, data: list, **kwargs) -> list:
+        top_n = [record for record in data if "query_hash" in record]
+        raw_lines = [record for record in data if "query_hash" not in record]
+
         rows = []
-        for i, line_json in enumerate(data):
+        for i, line_json in enumerate(top_n):
             query_hash = line_json.get("query_hash", "N/A")
             ns = line_json.get("ns", "N/A")
             query_pattern = line_json.get("query_pattern") or {}
@@ -69,8 +74,11 @@ class TopSlowParser(BaseParser):
                 "rows": rows,
             },
             {"type": "code", "language": "json", "code": "// Click query hash to display sample query..."},
-            {"type": "chart", "data": data},
+            # Wiring chart block: attaches click handlers to the table anchors
+            {"type": "chart", "data": top_n},
+            # Chart tabs block: the scatter charts, fed with the raw log lines
+            {"type": "chart", "data": raw_lines},
         ]
 
 
-__all__ = ["TopSlowParser"]
+__all__ = ["SlowParser"]

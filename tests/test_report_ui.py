@@ -45,8 +45,7 @@ EXPECTED_SECTIONS = [
     "Log Rate Analysis",
     "Slow Rate",
     "Client Metadata",
-    "Top Slow Operations",
-    "Slow Operations Chart",
+    "Slow Operations",
     "Member State Trace",
     "Warning/Error/Fatal Logs",
     "Basic Info",
@@ -185,9 +184,9 @@ def test_charts_rendered(page):
 @pytest.mark.integration
 def test_wef_anchor_reveals_sample(page):
     # Clicking a WEF code anchor reveals the sample log line in the code block.
-    # The JSON code blocks appear in report order: TopSlow, SlowChart, WEF, Info.
+    # The JSON code blocks appear in report order: Slow Operations, WEF, Info.
     table = page.locator("table", has_text="Known Risks")
-    sample_code = page.locator("pre code.language-json").nth(2)
+    sample_code = page.locator("pre code.language-json").nth(1)
     before = sample_code.inner_text()
     assert "Click error code" in before
     table.locator("tbody tr a").first.click()
