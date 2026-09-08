@@ -13,7 +13,7 @@ from random import randint
 from mongo_x_ray.utils import bold, env, green, yellow
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.wef_parser import WEFParser
-from mongo_x_ray_log.rules.warning_log_rule import WarningLogRule
+from mongo_x_ray_log.rules.severity_log_rule import SeverityLogRule
 
 
 class WEFItem(BaseItem):
@@ -23,7 +23,7 @@ class WEFItem(BaseItem):
         self.name = "Warning/Error/Fatal Logs"
         self.description = "Visualize warning, error, and fatal log messages."
         self._ai_support = self.config.get("ai_support", False)
-        self._rules["warning_log"] = WarningLogRule(config)
+        self._rules["severity_log"] = SeverityLogRule(config)
 
     def analyze(self, log_line):
         severity = log_line.get("s", "").lower()

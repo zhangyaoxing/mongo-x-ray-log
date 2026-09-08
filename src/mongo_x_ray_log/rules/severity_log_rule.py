@@ -14,15 +14,16 @@ from mongo_x_ray.shared import SEVERITY
 from mongo_x_ray_log.rules.base_rule import BaseRule
 
 
-class WarningLogRule(BaseRule):
-    """Checks whether the log contains any warning-level log messages."""
+class SeverityLogRule(BaseRule):
+    """Checks the W/E/F log entries for warning- and fatal-severity messages."""
 
     def __init__(self, config: Optional[dict] = None):
         super().__init__(config)
         self._rule_desc.append("Checks if there are any warning-level log messages.")
+        self._rule_desc.append("Checks if there are any fatal-level log messages.")
 
     def apply(self, data: list, **kwargs) -> tuple:
-        """Raise a MEDIUM issue when at least one warning log entry is present.
+        """Raise an issue when warning or fatal log entries are present.
 
         Args:
             data (list): The W/E/F log entries, a list of dicts with a
@@ -34,6 +35,7 @@ class WarningLogRule(BaseRule):
         """
         host = kwargs.get("extra_info", {}).get("host", "unknown")
         warnings = [entry for entry in data if (entry.get("severity", "") or "").lower() == "w"]
+        fatals = [entry for entry in data if (entry.get("severity", "") or "").lower() == "f"]
         test_results = []
         if warnings:
             test_results.append(
@@ -47,7 +49,19 @@ class WarningLogRule(BaseRule):
                     ),
                 }
             )
+        if fatals:
+            test_results.append(
+                {
+                    "host": host,
+                    "severity": SEVERITY.HIGH,
+                    "title": "Fatal Logs Detected",
+                    "description": (
+                        f"The log contains `{len(fatals)}` fatal log entr{'y' if len(fatals) == 1 else 'ies'}. "
+                        "Review the Warning/Error/Fatal Logs section for details."
+                    ),
+                }
+            )
         return test_results, data
 
 
-__all__ = ["WarningLogRule"]
+__all__ = ["SeverityLogRule"]
