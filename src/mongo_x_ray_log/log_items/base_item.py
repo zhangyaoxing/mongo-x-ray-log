@@ -57,6 +57,7 @@ class BaseItem:
         self._hostname: Optional[str] = None
         self._test_result: list = []
         self._rules: dict[str, BaseRule] = {}
+        self._description: str = ""
         if os.path.isfile(self._output_file):
             os.remove(self._output_file)
 
@@ -75,7 +76,12 @@ class BaseItem:
 
     @property
     def description(self):
-        return self._description
+        """The item summary plus a bullet list of what each rule checks."""
+        desc = self._description
+        rules_desc = "\n".join(rule.description_md for rule in self._rules.values())
+        if rules_desc:
+            desc = f"{desc}\n\n{rules_desc}" if desc else rules_desc
+        return desc
 
     @description.setter
     def description(self, value):
