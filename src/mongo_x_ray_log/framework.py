@@ -22,6 +22,7 @@ from mongo_x_ray.shared import str_to_md_id, to_json
 from mongo_x_ray.utils import bold, cyan, env, green, load_classes, yellow
 from mongo_x_ray_log.log_items.info_item import InfoItem
 from mongo_x_ray_log.log_items.state_trace_item import StateTraceItem
+from mongo_x_ray_log.log_items.summary_item import SummaryItem
 
 logger = logging.getLogger(__name__)
 LOG_CLASSES = load_classes("mongo_x_ray_log.log_items")
@@ -300,11 +301,13 @@ class Framework(BaseFramework):
         output.write("- **select time frame:** _drag_\n\n")
 
         # Enrich the test results with matched risks from the risk register so
-        # the issue table can show the RISK badge (like the other modules).
+        # the issue table and summary can show the RISK badge (like the other modules).
+        risk_available = False
         try:
             from mongo_x_ray_risk import enrich_test_results, has_risks
 
-            if has_risks():
+            risk_available = has_risks()
+            if risk_available:
                 matched = 0
                 for item in self._items:
                     matched += enrich_test_results(item._test_result)
@@ -314,6 +317,10 @@ class Framework(BaseFramework):
             self._logger.debug("Risk register matching not available", exc_info=True)
 
         output.write("## 1 Review Test Results\n\n")
+        output.write("### Overview\n\n")
+        summary_item = SummaryItem(risk_available=risk_available)
+        summary_item.summarize(self._items)
+        summary_item.overview(output)
         for i, item in enumerate(self._items):
             title = f"1.{i + 1} {item.name}"
             review_title = f"2.{i + 1} Review {item.name}"
