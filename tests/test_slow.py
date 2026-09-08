@@ -109,3 +109,61 @@ def test_slow_item_keeps_same_shape_on_different_namespaces_separate(tmp_path):
     assert {r["ns"] for r in aggregated} == {"db1.c", "db2.c"}
     # The displayed query hash stays the same (it really is identical)
     assert {r["query_hash"] for r in aggregated} == {"SAMEHASH"}
+
+
+def _aggregate(query_hash="ABC123", duration=20):
+    return {
+        "t": "2026-07-03T00:00:00",
+        "s": "I",
+        "id": 51803,
+        "msg": "Slow query",
+        "attr": {
+            "type": "command",
+            "ns": "test.c",
+            "command": {"aggregate": "c", "pipeline": [{"$match": {"size": "large"}}], "cursor": {}},
+            "queryHash": query_hash,
+            "durationMillis": duration,
+            "nreturned": 1,
+            "keysExamined": 1,
+            "docsExamined": 1,
+            "planSummary": "IXSCAN { size: 1 }",
+        },
+    }
+
+
+def _getmore(query_hash="ABC123", duration=5):
+    return {
+        "t": "2026-07-03T00:00:01",
+        "s": "I",
+        "id": 51803,
+        "msg": "Slow query",
+        "attr": {
+            "type": "command",
+            "ns": "test.c",
+            "command": {"getMore": 123, "collection": "c"},
+            "originatingCommand": {"aggregate": "c", "pipeline": [{"$match": {"size": "large"}}]},
+            "queryHash": query_hash,
+            "durationMillis": duration,
+            "nreturned": 1,
+            "keysExamined": 1,
+            "docsExamined": 1,
+            "planSummary": "IXSCAN { size: 1 }",
+        },
+    }
+
+
+def test_slow_item_keeps_command_and_its_getmore_separate(tmp_path):
+    # An aggregate and its follow-up getMore can share the same query hash;
+    # they must stay separate so the op and sample stay consistent.
+    item = SlowItem(output_folder=str(tmp_path), config={})
+    item.analyze(_aggregate())
+    item.analyze(_getmore())
+    item.finalize_analysis()
+
+    aggregated = [r for r in item._load_records() if "query_hash" in r]
+    assert len(aggregated) == 2
+    by_type = {r["query_pattern"]["type"]: r for r in aggregated}
+    assert set(by_type) == {"aggregate", "getmore"}
+    # The sample matches the op for each record
+    assert "aggregate" in by_type["aggregate"]["sample"]["attr"]["command"]
+    assert "getMore" in by_type["getmore"]["sample"]["attr"]["command"]

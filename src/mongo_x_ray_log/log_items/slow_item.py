@@ -62,9 +62,10 @@ class SlowItem(BaseItem):
             # If so, we generate one based on the query shape and sort
             query_hash = json_hash(query_pattern, 4)
         # The query hash alone is not unique: the same query shape can run on
-        # different namespaces. Namespace-qualify the aggregation key so those
-        # are kept as separate patterns.
-        key = f"{ns}\x00{query_hash}"
+        # different namespaces, and a command shares its pattern with its
+        # follow-up getMore (e.g. aggregate vs getmore of that aggregate).
+        # Namespace- and type-qualify the aggregation key so those stay separate.
+        key = f"{ns}\x00{query_pattern.get('type', 'command')}\x00{query_hash}"
         slow_query = self._patterns.get(key, None)
         if slow_query is None:
             slow_query = {}
