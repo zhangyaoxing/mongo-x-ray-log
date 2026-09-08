@@ -76,3 +76,36 @@ def test_slow_item_mock_output(tmp_path):
     assert output[0]["id"] == 51803
     assert output[0]["attr"]["ns"] == "Restaurant.pizzas"
     assert "query_hash" in output[4]
+
+
+def _slow(ns, query_hash="SAMEHASH", duration=10):
+    return {
+        "t": "2026-07-03T00:00:00",
+        "s": "I",
+        "id": 51803,
+        "msg": "Slow query",
+        "attr": {
+            "type": "command",
+            "ns": ns,
+            "command": {"find": "c", "filter": {"x": 1}},
+            "queryHash": query_hash,
+            "durationMillis": duration,
+            "nreturned": 1,
+            "keysExamined": 1,
+            "docsExamined": 1,
+            "planSummary": "IXSCAN { x: 1 }",
+        },
+    }
+
+
+def test_slow_item_keeps_same_shape_on_different_namespaces_separate(tmp_path):
+    item = SlowItem(output_folder=str(tmp_path), config={})
+    item.analyze(_slow("db1.c"))
+    item.analyze(_slow("db2.c"))
+    item.finalize_analysis()
+
+    aggregated = [r for r in item._load_records() if "query_hash" in r]
+    assert len(aggregated) == 2
+    assert {r["ns"] for r in aggregated} == {"db1.c", "db2.c"}
+    # The displayed query hash stays the same (it really is identical)
+    assert {r["query_hash"] for r in aggregated} == {"SAMEHASH"}

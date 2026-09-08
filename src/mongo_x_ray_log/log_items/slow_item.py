@@ -61,10 +61,14 @@ class SlowItem(BaseItem):
             # Some command doesn't have queryHash, e.g., getMore
             # If so, we generate one based on the query shape and sort
             query_hash = json_hash(query_pattern, 4)
-        slow_query = self._patterns.get(query_hash, None)
+        # The query hash alone is not unique: the same query shape can run on
+        # different namespaces. Namespace-qualify the aggregation key so those
+        # are kept as separate patterns.
+        key = f"{ns}\x00{query_hash}"
+        slow_query = self._patterns.get(key, None)
         if slow_query is None:
             slow_query = {}
-            self._patterns[query_hash] = slow_query
+            self._patterns[key] = slow_query
         slow_query.update(
             {
                 "query_hash": query_hash,
