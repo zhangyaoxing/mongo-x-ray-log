@@ -50,7 +50,7 @@ class SlowParser(BaseParser):
                 "Has Sort Stage": has_sort,
             }
             plan_summary = line_json.get("plan_summary", "N/A")
-            plan_summary = escape_markdown(plan_summary if plan_summary != "" else "N/A")
+            plan_summary = f"`{escape_markdown(plan_summary if plan_summary != '' else 'N/A')}`"
             sort = query_pattern.get("sort", {})
             pattern_cell = f"Filter: <br><pre>{format_json_md(pattern)}</pre>"
             if sort:

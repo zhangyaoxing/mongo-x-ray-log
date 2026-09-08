@@ -44,14 +44,14 @@ class ClientMetaParser(BaseParser):
             full_app = doc.get("application", {}).get("name", "Unknown")
             trunc_app = truncate_content(full_app)
             app_html = (
-                tooltip_html(escape_markdown(full_app), escape_markdown(trunc_app))
+                tooltip_html(escape_markdown(full_app), f"`{escape_markdown(trunc_app)}`")
                 if full_app != trunc_app
-                else escape_markdown(full_app)
+                else f"`{escape_markdown(full_app)}`"
             )
             driver = doc.get("driver", {})
             driver_name = driver.get("name", "Unknown")
             driver_version = driver.get("version", "Unknown")
-            full_driver = escape_markdown(f"{driver_name} {driver_version}")
+            full_driver = f"`{escape_markdown(f'{driver_name} {driver_version}')}`"
             is_compatible = server_version is None or is_driver_compatible(
                 driver_name,
                 driver_version,
