@@ -208,3 +208,41 @@ def test_getmore_ignores_non_dict_originating_command():
     pattern = analyze_query_pattern(log)
     assert pattern["type"] == "getmore"
     assert pattern["pattern"] == {}
+
+
+def test_aggregate_sort_stage_extracted():
+    log = {
+        "id": 51803,
+        "msg": "Slow query",
+        "attr": {
+            "type": "command",
+            "ns": "test.pizzas",
+            "command": {
+                "aggregate": "pizzas",
+                "pipeline": [{"$match": {"size": "large"}}, {"$sort": {"price": -1}}],
+            },
+        },
+    }
+    pattern = analyze_query_pattern(log)
+    assert pattern["type"] == "aggregate"
+    assert pattern["pattern"] == {"size": 1}
+    assert pattern["sort"] == {"price": -1}
+
+
+def test_getmore_aggregate_originating_sort_stage_extracted():
+    log = {
+        "id": 51803,
+        "msg": "Slow query",
+        "attr": {
+            "type": "command",
+            "command": {"getMore": 123, "collection": "pizzas"},
+            "originatingCommand": {
+                "aggregate": "pizzas",
+                "pipeline": [{"$match": {"size": "large"}}, {"$sort": {"price": -1}}],
+            },
+        },
+    }
+    pattern = analyze_query_pattern(log)
+    assert pattern["type"] == "getmore"
+    assert pattern["pattern"] == {"size": 1}
+    assert pattern["sort"] == {"price": -1}

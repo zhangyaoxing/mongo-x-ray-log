@@ -51,11 +51,15 @@ class SlowParser(BaseParser):
             }
             plan_summary = line_json.get("plan_summary", "N/A")
             plan_summary = escape_markdown(plan_summary if plan_summary != "" else "N/A")
+            sort = query_pattern.get("sort", {})
+            pattern_cell = f"Filter: <br><pre>{format_json_md(pattern)}</pre>"
+            if sort:
+                pattern_cell += f"<br>Sort: <br><pre>{format_json_md(sort)}</pre>"
             rows.append(
                 [
                     f"[{query_hash}](#{i})",
                     f"`{op}` on `{ns}`",
-                    f"<pre>{format_json_md(pattern)}</pre>",
+                    pattern_cell,
                     f"<pre>{format_json_md(details)}</pre>",
                     f"{plan_summary}",
                 ]

@@ -110,6 +110,19 @@ Analyze MongoDB query patterns from log entries.
 """
 
 
+def _extract_pipeline_stages(pipeline: list) -> tuple:
+    """Extract the ``$match`` filter and ``$sort`` condition from an aggregation pipeline."""
+    query = {}
+    sort = {}
+    for stage in pipeline or []:
+        if isinstance(stage, dict):
+            if "$match" in stage:
+                query = stage["$match"]
+            elif "$sort" in stage:
+                sort = stage["$sort"]
+    return query, sort
+
+
 def analyze_query_pattern(log_line):
     query_type = "command"
     query = {}
@@ -132,13 +145,7 @@ def analyze_query_pattern(log_line):
         query = command.get("updates", [])
     elif "aggregate" in command:
         query_type = "aggregate"
-        query = command.get("pipeline", [])
-        # This is not correct, but should cover 90% of cases
-        # We only handle simple $match stage for now
-        first_stage = query[0] if len(query) > 0 else {}
-        if "$match" in first_stage:
-            query = first_stage["$match"]
-        # TODO: enumerate all stages to find out $sort stage.
+        query, sort = _extract_pipeline_stages(command.get("pipeline", []))
     elif "find" in command:
         query_type = "find"
         query = command.get("filter", {})
@@ -157,11 +164,7 @@ def analyze_query_pattern(log_line):
         if not isinstance(originating, dict):
             originating = {}
         if "aggregate" in originating:
-            pipeline = originating.get("pipeline", [])
-            first_stage = pipeline[0] if len(pipeline) > 0 else {}
-            if "$match" in first_stage:
-                query = first_stage["$match"]
-            # TODO: enumerate all stages to find out $sort stage.
+            query, sort = _extract_pipeline_stages(originating.get("pipeline", []))
         else:
             query = originating.get("filter", {})
             sort = originating.get("sort", {})

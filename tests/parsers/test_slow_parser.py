@@ -43,3 +43,23 @@ def test_slow_parser_markdown_order():
     table_pos = md.find("Top Slow Operations")
     code_pos = md.find("// Click query hash to display sample query...")
     assert 0 <= chart_pos < table_pos < code_pos
+
+
+def test_slow_parser_pattern_cell_includes_filter_and_sort():
+    aggregated = dict(AGGREGATED)
+    aggregated["query_pattern"] = {"type": "find", "pattern": {"size": 1}, "sort": {"price": -1}}
+    parser = SlowParser()
+    output = parser.parse([RAW_LINE, aggregated])
+    cell = output[1]["rows"][0][2]
+    assert cell.startswith("Filter: <br>")
+    assert "<pre>" in cell
+    assert "Sort: <br>" in cell
+    assert "price" in cell
+
+
+def test_slow_parser_pattern_cell_omits_sort_when_absent():
+    parser = SlowParser()
+    output = parser.parse([RAW_LINE, AGGREGATED])
+    cell = output[1]["rows"][0][2]
+    assert cell.startswith("Filter: <br>")
+    assert "Sort:" not in cell
