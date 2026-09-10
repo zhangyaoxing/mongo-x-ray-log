@@ -28,6 +28,9 @@
 ### Documentation
 - README gained the PyPI badge.
 
+### Dependencies
+- Requires `mongo-x-ray-hc>=2.1.0`: the healthcheck plugin owns the shared issue catalog (`mongo_x_ray_hc.issues`) and hc 2.0.0 imports `mongo_x_ray.issues`, which core 2.1.0 no longer ships.
+
 ## 2.0.0
 
 The plugin was extracted from the core x-ray project as a standalone package (`x-ray log <path> [start] [end]`), with nine analysis items, shared parsers and report rendering, AI-assisted analysis for W/E/F logs, risk-register matching, PyPI/TestPyPI publishing, CI and CodeQL.
