@@ -109,7 +109,7 @@ Examples:
         try:
             config = load_config(args.config)["log"]
             config["sample_rate"] = args.rate
-            config["item_config"]["TopSlowItem"]["top"] = args.top
+            config["item_config"]["SlowItem"]["top"] = args.top
         except FileNotFoundError:
             logger.error("Config file not found: %s", args.config)
             logger.info("Please provide a valid path to config.json.")

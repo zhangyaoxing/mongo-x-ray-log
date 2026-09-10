@@ -45,8 +45,7 @@ EXPECTED_SECTIONS = [
     "Log Rate Analysis",
     "Slow Rate",
     "Client Metadata",
-    "Top Slow Operations",
-    "Slow Operations Chart",
+    "Slow Operations",
     "Member State Trace",
     "Warning/Error/Fatal Logs",
     "Basic Info",
@@ -138,7 +137,7 @@ def test_wef_table_has_rows(page):
 def test_top_slow_table_has_rows(page):
     # The TopSlow table only has rows when the log contains slow queries on
     # non-system namespaces; otherwise the section shows "No data available."
-    table = page.locator("table", has_text="Plan Summary")
+    table = page.locator("table:has(th:text-is('Plan Summary'))")
     assert table.count() <= 1
     if table.count() == 1:
         assert table.locator("tbody tr").count() >= 1
@@ -154,6 +153,31 @@ def test_client_metadata_table_has_rows(page):
 @pytest.mark.integration
 def test_reset_button_for_log_rate(page):
     assert page.locator("input#reset_LogRateItem").count() == 1
+
+
+@pytest.mark.integration
+def test_reset_buttons_reset_chart_zoom(page):
+    # Every reset button must reset the zoom of the chart(s) in its section.
+    # Spy on resetZoom of all rendered charts and click every reset button.
+    page.evaluate(
+        """() => {
+        window.__resetCalls = 0;
+        window.charts.forEach(ch => {
+            const orig = ch.resetZoom;
+            ch.resetZoom = function (...args) {
+                window.__resetCalls++;
+                return orig.apply(this, args);
+            };
+        });
+    }"""
+    )
+    buttons = page.locator('input[id^="reset_"]')
+    assert buttons.count() >= 1
+    for i in range(buttons.count()):
+        buttons.nth(i).click()
+    page.wait_for_timeout(100)
+    calls = page.evaluate("() => window.__resetCalls")
+    assert calls >= buttons.count()
 
 
 @pytest.mark.integration
@@ -185,9 +209,9 @@ def test_charts_rendered(page):
 @pytest.mark.integration
 def test_wef_anchor_reveals_sample(page):
     # Clicking a WEF code anchor reveals the sample log line in the code block.
-    # The JSON code blocks appear in report order: TopSlow, SlowChart, WEF, Info.
+    # The JSON code blocks appear in report order: Slow Operations, WEF, Info.
     table = page.locator("table", has_text="Known Risks")
-    sample_code = page.locator("pre code.language-json").nth(2)
+    sample_code = page.locator("pre code.language-json").nth(1)
     before = sample_code.inner_text()
     assert "Click error code" in before
     table.locator("tbody tr a").first.click()

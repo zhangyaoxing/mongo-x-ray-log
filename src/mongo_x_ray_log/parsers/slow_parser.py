@@ -12,16 +12,21 @@ from mongo_x_ray.utils import escape_markdown, format_json_md
 from mongo_x_ray_log.parsers.base_parser import BaseParser
 
 
-class TopSlowParser(BaseParser):
-    """Render the top slow operations as an interactive table.
+class SlowParser(BaseParser):
+    """Render the slow operations: a top-N table with sample viewers and the
+    scatter charts (duration / scanned / scanned objects) shown as tabs.
 
-    The table rows link to the sample log lines; a chart block after the
-    table wires up the click handlers (see the TopSlowParser_3 snippet).
+    The output file mixes two record kinds: the raw slow query lines (streamed
+    during analysis, no top-level ``query_hash``) and the aggregated top-N
+    records (written at finalize, with a top-level ``query_hash``).
     """
 
     def parse(self, data: list, **kwargs) -> list:
+        top_n = [record for record in data if "query_hash" in record]
+        raw_lines = [record for record in data if "query_hash" not in record]
+
         rows = []
-        for i, line_json in enumerate(data):
+        for i, line_json in enumerate(top_n):
             query_hash = line_json.get("query_hash", "N/A")
             ns = line_json.get("ns", "N/A")
             query_pattern = line_json.get("query_pattern") or {}
@@ -42,35 +47,43 @@ class TopSlowParser(BaseParser):
                 "Avg Duration (ms)": avg_duration,
                 "Targeting": scanned_per_returned,
                 "Targeting (Obj)": scannedobj_per_returned,
-                "Has Sort": has_sort,
+                "Has Sort Stage": has_sort,
             }
             plan_summary = line_json.get("plan_summary", "N/A")
-            plan_summary = escape_markdown(plan_summary if plan_summary != "" else "N/A")
+            plan_summary = f"`{escape_markdown(plan_summary if plan_summary != '' else 'N/A')}`"
+            sort = query_pattern.get("sort", {})
+            pattern_cell = f"Filter: <br><pre>{format_json_md(pattern)}</pre>"
+            if sort:
+                pattern_cell += f"<br>Sort: <br><pre>{format_json_md(sort)}</pre>"
             rows.append(
                 [
                     f"[{query_hash}](#{i})",
                     f"`{op}` on `{ns}`",
-                    f"<pre>{format_json_md(pattern)}</pre>",
+                    pattern_cell,
                     f"<pre>{format_json_md(details)}</pre>",
                     f"{plan_summary}",
                 ]
             )
         return [
+            # Chart tabs block: the scatter charts first, fed with the raw log lines
+            {"type": "chart", "data": raw_lines},
             {
                 "type": "table",
                 "caption": "Top Slow Operations",
                 "header": [
                     {"width": "120px", "text": "Query Hash"},
                     {"width": "200px", "text": "Op"},
-                    {"width": "*", "text": "Pattern"},
-                    {"width": "*", "text": "Details"},
-                    {"width": "200px", "text": "Plan Summary"},
+                    {"width": "*", "text": "Pattern", "align": "left"},
+                    {"width": "*", "text": "Details", "align": "left"},
+                    {"width": "200px", "text": "Plan Summary", "align": "left"},
                 ],
                 "rows": rows,
             },
+            # The shared sample code block comes last
             {"type": "code", "language": "json", "code": "// Click query hash to display sample query..."},
-            {"type": "chart", "data": data},
+            # Wiring chart block: attaches click handlers to the table anchors
+            {"type": "chart", "data": top_n},
         ]
 
 
-__all__ = ["TopSlowParser"]
+__all__ = ["SlowParser"]

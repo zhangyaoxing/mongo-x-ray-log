@@ -110,6 +110,19 @@ Analyze MongoDB query patterns from log entries.
 """
 
 
+def _extract_pipeline_stages(pipeline: list) -> tuple:
+    """Extract the ``$match`` filter and ``$sort`` condition from an aggregation pipeline."""
+    query = {}
+    sort = {}
+    for stage in pipeline or []:
+        if isinstance(stage, dict):
+            if "$match" in stage:
+                query = stage["$match"]
+            elif "$sort" in stage:
+                sort = stage["$sort"]
+    return query, sort
+
+
 def analyze_query_pattern(log_line):
     query_type = "command"
     query = {}
@@ -132,20 +145,29 @@ def analyze_query_pattern(log_line):
         query = command.get("updates", [])
     elif "aggregate" in command:
         query_type = "aggregate"
-        query = command.get("pipeline", [])
-        # This is not correct, but should cover 90% of cases
-        # We only handle simple $match stage for now
-        first_stage = query[0] if len(query) > 0 else {}
-        if "$match" in first_stage:
-            query = first_stage["$match"]
-        # TODO: enumerate all stages to find out $sort stage.
+        query, sort = _extract_pipeline_stages(command.get("pipeline", []))
     elif "find" in command:
         query_type = "find"
         query = command.get("filter", {})
         sort = command.get("sort", {})
     elif "getMore" in command:
+        # A getMore slow query does not contain the query pattern itself: the
+        # pattern lives in the originating command (the find/aggregate that
+        # created the cursor), so it must be extracted from there. Depending on
+        # the log format it is nested under attr or under attr.command. If no
+        # originating command is available, fall back to an empty pattern
+        # instead of failing.
         query_type = "getmore"
-        query = attr.get("originatingCommand", {}).get("filter", {})
+        originating = attr.get("originatingCommand")
+        if not isinstance(originating, dict):
+            originating = command.get("originatingCommand")
+        if not isinstance(originating, dict):
+            originating = {}
+        if "aggregate" in originating:
+            query, sort = _extract_pipeline_stages(originating.get("pipeline", []))
+        else:
+            query = originating.get("filter", {})
+            sort = originating.get("sort", {})
     elif "insert" in command:
         query_type = "insert"
         query = {}

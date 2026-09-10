@@ -71,10 +71,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     charts.push(chart);
 
+    // The reset input is written by the framework before the review content but
+    // the markdown renderer may wrap it in a <p>, so also look inside elements.
     let resetButton = null;
     for (let el = container; el; el = el.previousElementSibling) {
         if (el.tagName === 'INPUT' && el.id.indexOf('reset_') === 0) {
             resetButton = el;
+            break;
+        }
+        if (!resetButton && el.querySelector && el.querySelector('input[id^="reset_"]')) {
+            resetButton = el.querySelector('input[id^="reset_"]');
             break;
         }
     }

@@ -13,6 +13,7 @@ from random import randint
 from mongo_x_ray.utils import bold, env, green, yellow
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.wef_parser import WEFParser
+from mongo_x_ray_log.rules.severity_log_rule import SeverityLogRule
 
 
 class WEFItem(BaseItem):
@@ -22,6 +23,7 @@ class WEFItem(BaseItem):
         self.name = "Warning/Error/Fatal Logs"
         self.description = "Visualize warning, error, and fatal log messages."
         self._ai_support = self.config.get("ai_support", False)
+        self._rules["severity_log"] = SeverityLogRule(config)
 
     def analyze(self, log_line):
         severity = log_line.get("s", "").lower()
@@ -69,6 +71,10 @@ class WEFItem(BaseItem):
 
         self._match_risks()
         super().finalize_analysis()
+        # Apply the rules to generate the test results (e.g. warning logs present).
+        for rule in self._rules.values():
+            test_result, _ = rule.apply(self._cache, extra_info={"host": self._hostname or "unknown"})
+            self.append_test_results(test_result)
 
     def _match_risks(self) -> None:
         """Enrich cache entries with matched risk info via vector search."""

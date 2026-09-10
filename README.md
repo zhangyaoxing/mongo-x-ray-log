@@ -59,9 +59,8 @@ x-ray log [-h] [-s CHECKSET] [-o OUTPUT] [-f {markdown,html,pdf}] [--no-browser]
 | `ClientMetaItem` | Visualize client metadata (application, driver, OS, client IPs). |
 | `ConnectionRateItem` | Analyze the rate of connections created and ended over a time window. |
 | `LogRateItem` | Show the rate at which different log messages (grouped by log ID) appear over time. |
+| `SlowItem` | Identify the top N slowest operations (table with sample viewers) and chart them over time as tabs (duration / scanned / scanned objects). |
 | `SlowRateItem` | Analyze the rate of slow queries. |
-| `SlowChartItem` | Scatter plot of slow operations over time, each point colored by namespace. |
-| `TopSlowItem` | Identify the top N slowest operations from the log entries. |
 | `StateTraceItem` | Visualize replica set member state changes over time. |
 | `WEFItem` | Visualize warning, error and fatal log messages. |
 

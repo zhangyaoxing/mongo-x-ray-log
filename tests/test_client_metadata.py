@@ -143,9 +143,9 @@ def test_internal_drivers_still_displayed_in_results_table(tmp_path):
     md = buf.getvalue()
 
     # All internal drivers are still displayed as table rows
-    assert "|NetworkInterfaceTL 5.0.14|" in md
-    assert "|NetworkInterfaceTL-ReplNetwork 7.0.37|" in md
-    assert "|MongoDB Internal Client 7.0.2|" in md
+    assert "|`NetworkInterfaceTL 5.0.14`|" in md
+    assert "|`NetworkInterfaceTL-ReplNetwork 7.0.37`|" in md
+    assert "|`MongoDB Internal Client 7.0.2`|" in md
     # ... and they are not marked red as incompatible
     assert '<span style="color:red;">NetworkInterfaceTL' not in md
     assert '<span style="color:red;">MongoDB Internal Client' not in md

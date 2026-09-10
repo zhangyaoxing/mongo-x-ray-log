@@ -26,13 +26,13 @@ class InfoParser(BaseParser):
             version = build_info.get("version", "Unknown") if build_info else "Unknown"
             if build_info and "enterprise" in build_info.get("modules", []):
                 version += "-ent"
-            rows.append(["MongoDB Version", version])
+            rows.append(["MongoDB Version", f"`{version}`"])
             if fcv:
-                rows.append(["Feature Compatibility Version", fcv])
+                rows.append(["Feature Compatibility Version", f"`{fcv}`"])
             if process:
-                rows.append(["PID", process.get("pid", "Unknown")])
-                rows.append(["Host", process.get("host", "Unknown")])
-                rows.append(["Port", process.get("port", "Unknown")])
+                rows.append(["PID", f"`{process.get('pid', 'Unknown')}`"])
+                rows.append(["Host", f"`{process.get('host', 'Unknown')}`"])
+                rows.append(["Port", f"`{process.get('port', 'Unknown')}`"])
             output_list.append(
                 {
                     "type": "table",
@@ -45,12 +45,12 @@ class InfoParser(BaseParser):
         cert_info = data.get("cert_info", None)
         if cert_info:
             rows = [
-                ["Key File", cert_info.get("keyFile", "Unknown")],
-                ["Type", cert_info.get("type", "Unknown")],
-                ["Subject", cert_info.get("subject", "Unknown")],
-                ["Issuer", cert_info.get("issuer", "Unknown")],
-                ["Valid From", cert_info.get("notValidBefore", "Unknown")],
-                ["Valid To", cert_info.get("notValidAfter", "Unknown")],
+                ["Key File", f"`{cert_info.get('keyFile', 'Unknown')}`"],
+                ["Type", f"`{cert_info.get('type', 'Unknown')}`"],
+                ["Subject", f"`{cert_info.get('subject', 'Unknown')}`"],
+                ["Issuer", f"`{cert_info.get('issuer', 'Unknown')}`"],
+                ["Valid From", f"`{cert_info.get('notValidBefore', 'Unknown')}`"],
+                ["Valid To", f"`{cert_info.get('notValidAfter', 'Unknown')}`"],
             ]
             output_list.append(
                 {
@@ -69,8 +69,8 @@ class InfoParser(BaseParser):
                     "caption": "Operating System",
                     "header": [{"width": "250px", "text": "Key"}, {"width": "*", "text": "Value", "align": "left"}],
                     "rows": [
-                        ["Name", guest_os.get("name", "Unknown")],
-                        ["Version", guest_os.get("version", "Unknown")],
+                        ["Name", f"`{guest_os.get('name', 'Unknown')}`"],
+                        ["Version", f"`{guest_os.get('version', 'Unknown')}`"],
                     ],
                 }
             )
@@ -83,7 +83,7 @@ class InfoParser(BaseParser):
                 rows.append(
                     [
                         member.get("_id", "Unknown"),
-                        member.get("host", "Unknown"),
+                        f"`{member.get('host', 'Unknown')}`",
                         member.get("arbiterOnly", False),
                         member.get("priority", 0),
                         member.get("votes", 0),

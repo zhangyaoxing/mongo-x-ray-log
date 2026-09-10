@@ -70,8 +70,9 @@ document.addEventListener('DOMContentLoaded', function() {
     canvas.className = 'bar';
     container.appendChild(wrapper);
     wrapper.appendChild(canvas);
-    let height = Object.keys(stateData).length * 30;
-    height = height < 90 ? 90 : height;
+    // Give each member row enough height for its state bar on top of the title,
+    // legend and axis space, so the state segments stay readable.
+    let height = Object.keys(stateData).length * 55 + 200;
     canvas.style.height = `${height}px`;
     canvas.height = height;
     const ctx = canvas.getContext('2d');
@@ -194,10 +195,16 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     charts.push(chart);
 
+    // The reset input is written by the framework before the review content but
+    // the markdown renderer may wrap it in a <p>, so also look inside elements.
     let resetButton = null;
     for (let el = container; el; el = el.previousElementSibling) {
         if (el.tagName === 'INPUT' && el.id.indexOf('reset_') === 0) {
             resetButton = el;
+            break;
+        }
+        if (!resetButton && el.querySelector && el.querySelector('input[id^="reset_"]')) {
+            resetButton = el.querySelector('input[id^="reset_"]');
             break;
         }
     }

@@ -10,6 +10,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.state_trace_parser import StateTraceParser
+from mongo_x_ray_log.rules.member_state_rule import MemberStateRule
 
 
 class StateTraceItem(BaseItem):
@@ -31,6 +32,7 @@ class StateTraceItem(BaseItem):
         self._cache = None
         self._myself = "self"
         self._last_log = None
+        self._rules["member_state"] = MemberStateRule(config)
 
     def analyze(self, log_line):
         super().analyze(log_line)
@@ -165,6 +167,10 @@ class StateTraceItem(BaseItem):
                     }
                 )
         super().finalize_analysis()
+        # Apply the rules to generate the test results (e.g. abnormal member state).
+        for rule in self._rules.values():
+            test_result, _ = rule.apply(self._cache, extra_info={"host": self._hostname or "unknown"})
+            self.append_test_results(test_result)
 
     def review_results_markdown(self, f):
         parser = StateTraceParser()

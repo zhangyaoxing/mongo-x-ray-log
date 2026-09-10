@@ -8,6 +8,8 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
+from mongo_x_ray_hc.rules.security_rule import SecurityRule
+from mongo_x_ray_hc.rules.tls_protocol_rule import TlsProtocolRule
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.info_parser import InfoParser
 
@@ -18,6 +20,10 @@ class InfoItem(BaseItem):
         self.name = "Basic Info"
         self.description = "Basic information about the instance."
         self._cache = {}
+        # Reuse the healthcheck rules that inspect the server command line options
+        # (the same rules the GMD module runs on getCmdLineOpts).
+        self._rules["security"] = SecurityRule(config)
+        self._rules["tls_protocol"] = TlsProtocolRule(config)
 
         self._ids = [
             20721,  # Process Details
@@ -91,6 +97,21 @@ class InfoItem(BaseItem):
     def _process_certificate_info(self, attr):
         cert_info = attr
         self._cache["cert_info"] = cert_info
+
+    def finalize_analysis(self):
+        super().finalize_analysis()
+        # The command line options echoed in the log are the config sections passed
+        # on the command line (equivalent to getCmdLineOpts().parsed). Run the same
+        # security checks the GMD module runs on getCmdLineOpts, skipping when the
+        # options are missing or only point at a config file (their effective values
+        # are then unknown).
+        options = self._cache.get("command_line_options", {})
+        if not options or set(options) == {"config"}:
+            return
+        cmd_line_opts = {"parsed": options}
+        for rule in self._rules.values():
+            test_result, _ = rule.apply(cmd_line_opts, extra_info={"host": self._hostname or "unknown"})
+            self.append_test_results(test_result)
 
     def review_results_markdown(self, f):
         parser = InfoParser()

@@ -59,12 +59,12 @@ def test_client_meta_parser_marks_incompatible_drivers_red():
     output = parser.parse(DATA, server_version=Version.parse("7.0.0"))
     rows = output[0]["rows"]
     # Rows are sorted by application name, then driver name
-    assert rows[0][0] == "mlaunch v1.7.2"
-    myapp_row = next(row for row in rows if row[0] == "myapp")
-    assert '<span style="color:red;">mongo-go-driver v1.10.0</span>' in myapp_row[1]
+    assert rows[0][0] == "`mlaunch v1.7.2`"
+    myapp_row = next(row for row in rows if row[0] == "`myapp`")
+    assert '<span style="color:red;">`mongo-go-driver v1.10.0`</span>' in myapp_row[1]
     # Compatible and internal drivers are not marked red
     for row in rows:
-        if row[0] != "myapp":
+        if row[0] != "`myapp`":
             assert "color:red" not in row[1]
 
 
@@ -72,6 +72,6 @@ def test_client_meta_parser_markdown_renders_table_and_charts():
     parser = ClientMetaParser()
     md = parser.markdown(DATA, server_version=Version.parse("7.0.0"))
     assert "Client Metadata" in md
-    assert "|NetworkInterfaceTL 5.0.14|" in md
+    assert "|`NetworkInterfaceTL 5.0.14`|" in md
     assert "Number of Clients By Driver" in md
     assert "Number of Clients By IP" in md
