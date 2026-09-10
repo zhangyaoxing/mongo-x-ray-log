@@ -2,24 +2,32 @@
 
 **mongo-x-ray-log** is the MongoDB log analysis plugin for [x-ray](https://github.com/mongodb-ps/ce-mongo-x-ray). It analyzes MongoDB log files and produces an interactive HTML/Markdown/PDF report on slow queries, connection/log rates, client metadata, replica-set state transitions, warnings/errors/fatal logs, and basic instance information.
 
-All changes are part of the `2.0.0` line (the plugin was extracted from the core x-ray project).
-
-## 2.0.0 — Main changes
+## 2.1.0 — Main changes
 
 ### Added
-- Standalone log analysis plugin (`x-ray log <path> [start] [end]`) with nine analysis items: Client Metadata, Connection Rate, Log Rate, Slow Rate, Top Slow Operations, Slow Operations Chart, Member State Trace, Warning/Error/Fatal Logs, and Basic Info.
-- Slow query pattern analyzer, interactive HTML report (charts, outline, copy-table, sample viewers), unit tests plus Playwright browser tests for the report UI, and PDF output.
-- AI-assisted analysis (GPT) for warning/error/fatal logs and risk-register matching for known issues.
-- `x-ray log --version` support, PyPI/TestPyPI publishing via trusted publishing, CI (ruff + unit tests) and CodeQL.
+- **Summary item** with an overview (severity and category counts) plus a risk scan of the report's findings.
+- **New rules**: slow rate rules for `SlowRateItem`, connection rate and basic info rules, slow operations rules on the top slow operations item, and member state rules for the member state trace.
+- **Warning/error/fatal severities**: warning logs raise a `MEDIUM` issue, fatal logs a `HIGH` issue.
+- **Query targeting escalation**: extremely poor query targeting is escalated to `HIGH` severity.
+- **Checks description**: each item now states in the report what its rules check.
+- **Slow operations patterns**: the pattern column shows the query sort ("Has Sort Stage"), and `getMore` slow queries derive their pattern from the originating command (falling back to an empty pattern when none is found).
 
 ### Changed
-- Report restructured to mirror the healthcheck/gmd modules: **"1 Review Test Results"** (rule-based pass/fail issues) and **"2 Review Raw Results"** (data review), with cross links.
-- Driver version compatibility rewritten as a rule producing test results, and all log item output now rendered through shared parsers (tables/charts/code) instead of per-item Markdown/JS.
-- Risk register and AI client integrated as optional/shared components from the core, with graceful degradation when not installed.
+- **Merged items**: Top Slow Operations and Slow Operations Chart are now a single `SlowItem`; the charts are rendered before the table and code block.
+- **Copyable values**: important table cells are wrapped in backticks so the new report copy icons can copy them with one click.
+- **Slow operation aggregation key** is namespace-qualified and includes the command type.
+- **Risk register**: test results are matched against the known risks, with a message logged before each vector search.
+- **Report copy support** (core-side): inline code, code blocks and table `<pre>` blocks now have copy icons, and table `<pre>` blocks are outlined.
 
 ### Fixed
-- Driver compatibility check no longer flags internal drivers (`NetworkInterfaceTL`, `MongoDB Internal Client`); they are still shown in the results table.
-- Removed unused code flagged by CodeQL.
+- Test results report the resolved hostname instead of `unknown`.
+- Member State Trace chart is sized (55px per member) so the state bars are visible.
+- Chart reset buttons now actually reset the zoom.
+- Code columns in the top slow operations table are left-aligned.
 
 ### Documentation
-- README rewritten with usage, CLI parameters, analysis items, and MongoDB 5.0+ compatibility notes.
+- README gained the PyPI badge.
+
+## 2.0.0
+
+The plugin was extracted from the core x-ray project as a standalone package (`x-ray log <path> [start] [end]`), with nine analysis items, shared parsers and report rendering, AI-assisted analysis for W/E/F logs, risk-register matching, PyPI/TestPyPI publishing, CI and CodeQL.
