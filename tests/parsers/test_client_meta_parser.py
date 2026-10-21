@@ -75,3 +75,24 @@ def test_client_meta_parser_markdown_renders_table_and_charts():
     assert "|`NetworkInterfaceTL 5.0.14`|" in md
     assert "Number of Clients By Driver" in md
     assert "Number of Clients By IP" in md
+
+
+def test_client_meta_parser_does_not_escape_pipe_in_driver():
+    parser = ClientMetaParser()
+    data = [
+        {
+            "doc": {
+                "application": {},
+                "driver": {"name": "mongo-java-driver|sync", "version": "5.5.2"},
+                "os": {},
+            },
+            "ips": [],
+        }
+    ]
+    output = parser.parse(data)
+    cell = output[0]["rows"][0][1]
+    assert cell == "`mongo-java-driver|sync 5.5.2`"
+    assert "\\|" not in cell
+    md = parser.markdown(data)
+    assert "mongo-java-driver|sync" in md
+    assert "\\|" not in md

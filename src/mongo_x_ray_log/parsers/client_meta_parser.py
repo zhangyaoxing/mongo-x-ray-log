@@ -20,6 +20,17 @@ from mongo_x_ray_log.rules.driver_compatibility_rule import (
 )
 
 
+def _code(text) -> str:
+    """Quote *text* in a markdown code span.
+
+    Inside a code span only the backtick delimiter needs escaping; markdown
+    special characters such as ``|`` or ``_`` are literal there, so escaping
+    them would show a stray backslash.
+    """
+    escaped = str(text).replace("`", "\\`")
+    return f"`{escaped}`"
+
+
 class ClientMetaParser(BaseParser):
     """Render the collected client metadata (driver, OS, platform, IPs) as tables and charts."""
 
@@ -43,15 +54,11 @@ class ClientMetaParser(BaseParser):
             doc = entry.get("doc", {})
             full_app = doc.get("application", {}).get("name", "Unknown")
             trunc_app = truncate_content(full_app)
-            app_html = (
-                tooltip_html(escape_markdown(full_app), f"`{escape_markdown(trunc_app)}`")
-                if full_app != trunc_app
-                else f"`{escape_markdown(full_app)}`"
-            )
+            app_html = tooltip_html(full_app, _code(trunc_app)) if full_app != trunc_app else _code(full_app)
             driver = doc.get("driver", {})
             driver_name = driver.get("name", "Unknown")
             driver_version = driver.get("version", "Unknown")
-            full_driver = f"`{escape_markdown(f'{driver_name} {driver_version}')}`"
+            full_driver = _code(f"{driver_name} {driver_version}")
             is_compatible = server_version is None or is_driver_compatible(
                 driver_name,
                 driver_version,
