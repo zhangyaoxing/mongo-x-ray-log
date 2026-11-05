@@ -1,5 +1,16 @@
 # mongo-x-ray-log Release Notes
 
+## 2.1.1
+
+Dependency and automation release — the plugin's own behaviour is unchanged.
+
+### Dependencies
+- Build: `setuptools` 84.0.0 → 84.2.1 ([`GHSA-xmj3-9gf7-h52w`](https://github.com/advisories/GHSA-xmj3-9gf7-h52w), low — Windows path escape via `namespace_packages.txt` during a legacy wheel install).
+
+### Automation
+- **Dependabot auto-merge repaired**: the workflow counted its own in-progress `auto-merge` check when waiting for "every check to pass", so it always timed out and updates stayed open. It now ignores its own check, retries a merge that lost a race with a sibling update, requests a rebase when the branch conflicts, and tolerates branches modified by hand.
+- Repository labels `dependencies`, `python` and `github-actions` added, so Dependabot can tag its pull requests.
+
 **mongo-x-ray-log** is the MongoDB log analysis plugin for [x-ray](https://github.com/mongodb-ps/ce-mongo-x-ray). It analyzes MongoDB log files and produces an interactive HTML/Markdown/PDF report on slow queries, connection/log rates, client metadata, replica-set state transitions, warnings/errors/fatal logs, and basic instance information.
 
 ## 2.1.0 — Main changes
