@@ -1,5 +1,10 @@
 # mongo-x-ray-log Release Notes
 
+## 2.1.2
+
+### Fixed
+- **The driver compatibility matrix accepts string versions**: `load_driver_matrix` passed every matrix entry to `Version(...)`, which only accepts a version array, so a matrix written the readable way (`"mongoc": "1.15"`) raised `ValueError: Invalid version array` and took the driver compatibility check and the client metadata table down with it. Entries are normalized now, so version strings, arrays and a mix of both all work.
+
 ## 2.1.1
 
 Dependency and automation release — the plugin's own behaviour is unchanged.
