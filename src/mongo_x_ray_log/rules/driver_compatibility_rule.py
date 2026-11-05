@@ -15,7 +15,7 @@ from typing import Optional
 
 from mongo_x_ray.shared import SEVERITY
 from mongo_x_ray.utils import get_script_path
-from mongo_x_ray.version import Version
+from mongo_x_ray.version import Version, normalize_version
 from mongo_x_ray_log.rules.base_rule import BaseRule
 
 COMPATIBILITY_MATRIX_JSON = files("mongo_x_ray") / "compatibility_matrix.json"
@@ -26,6 +26,22 @@ COMPATIBILITY_MATRIX_JSON = files("mongo_x_ray") / "compatibility_matrix.json"
 INTERNAL_DRIVER_NAMES = ("NetworkInterfaceTL", "MongoDB Internal Client")
 
 COMPATIBILITY_MATRIX_URL = "https://www.mongodb.com/docs/drivers/compatibility/"
+
+
+def _parse_driver_matrix(driver_matrix: dict) -> dict[str, Version]:
+    """Convert one compatibility matrix section to :class:`Version` objects.
+
+    A matrix entry may be written as a version array (``[1, 15]``) or as a
+    version string (``"1.15"``); both forms are accepted, because the matrix is
+    maintained by hand from the driver compatibility table.
+
+    Args:
+        driver_matrix: Mapping of driver name to its minimum compatible version.
+
+    Returns:
+        dict: The same mapping with values normalized to :class:`Version`.
+    """
+    return {k: normalize_version(v) for k, v in driver_matrix.items()}
 
 
 def load_driver_matrix(server_version: Optional[Version]) -> dict[str, Version]:
@@ -42,8 +58,7 @@ def load_driver_matrix(server_version: Optional[Version]) -> dict[str, Version]:
     with open(matrix_path, "r", encoding="utf-8") as f:
         compatibility_matrix = json.load(f)
     server_compatible_version = server_version.to_compatibility_str() if server_version else "Unknown"
-    driver_matrix = compatibility_matrix.get(server_compatible_version, {})
-    return {k: Version(v) for k, v in driver_matrix.items()}
+    return _parse_driver_matrix(compatibility_matrix.get(server_compatible_version, {}))
 
 
 def _is_internal_driver(log_driver_name: str) -> bool:

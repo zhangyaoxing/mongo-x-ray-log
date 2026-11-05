@@ -9,15 +9,14 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
 import io
-import json
 
 from bson import json_util
 
 from mongo_x_ray.version import Version
 from mongo_x_ray_log.log_items.client_meta_item import ClientMetaItem
 from mongo_x_ray_log.rules.driver_compatibility_rule import (
-    COMPATIBILITY_MATRIX_JSON,
     is_driver_compatible,
+    load_driver_matrix,
     parse_version_from_log,
 )
 from tests.mocking import gen_mock_write_output
@@ -113,9 +112,7 @@ def test_version_parser():
 def test_is_driver_compatible():
     # Assume server version is 7.0.0 for testing
     server_version = Version.parse("7.0.0")
-    with COMPATIBILITY_MATRIX_JSON.open("r") as f:
-        compatibility_matrix = json.load(f)
-    matrix_70 = {k: Version(v) for k, v in compatibility_matrix.get("7.0", {}).items()}
+    matrix_70 = load_driver_matrix(server_version)
     expected_compatibility = [True, True, False, True, True, False, True]
     for log, expected in zip(LOGS_2, expected_compatibility):
         is_compatible = is_driver_compatible(log["name"], log["version"], server_version, matrix_70)

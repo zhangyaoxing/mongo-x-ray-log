@@ -9,7 +9,11 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
 from mongo_x_ray.version import Version
-from mongo_x_ray_log.rules.driver_compatibility_rule import DriverCompatibilityRule
+from mongo_x_ray_log.rules.driver_compatibility_rule import (
+    DriverCompatibilityRule,
+    _parse_driver_matrix,
+    load_driver_matrix,
+)
 
 
 def _cache_entry(driver_name, driver_version, app_name="myapp"):
@@ -61,3 +65,34 @@ def test_driver_compatibility_rule_ignores_internal_drivers():
     ]
     test_results, _ = rule.apply(data, server_version=server_version, extra_info={"host": "test-host"})
     assert test_results == []
+
+
+def test_matrix_versions_may_be_written_as_strings():
+    # The compatibility table is maintained by hand, where "1.15" is easier to
+    # read than [1, 15].
+    matrix = _parse_driver_matrix({"mongoc": "1.15", "mongo-java-driver": "100.0"})
+
+    assert matrix["mongoc"] == Version.parse("1.15.0")
+    assert matrix["mongo-java-driver"] == Version.parse("100.0.0")
+
+
+def test_matrix_versions_may_still_be_written_as_arrays():
+    matrix = _parse_driver_matrix({"mongoc": [1, 15], "mongo-java-driver": [100, 0]})
+
+    assert matrix["mongoc"] == Version.parse("1.15.0")
+    assert matrix["mongo-java-driver"] == Version.parse("100.0.0")
+
+
+def test_matrix_sections_and_formats_can_be_mixed():
+    matrix = _parse_driver_matrix({"mongoc": "1.15", "mongocxx": [3, 4]})
+
+    assert matrix["mongoc"].version_array == [1, 15, 0, 0]
+    assert matrix["mongocxx"].version_array == [3, 4, 0, 0]
+
+
+def test_the_shipped_matrix_loads_for_a_known_server_version():
+    # Whatever the format of the shipped file, loading it must not raise.
+    matrix = load_driver_matrix(Version.parse("7.0.0"))
+
+    assert matrix
+    assert all(isinstance(version, Version) for version in matrix.values())
