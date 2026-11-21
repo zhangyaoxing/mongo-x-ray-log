@@ -42,6 +42,7 @@ def test_mongodb_template_keeps_the_libraries_and_placeholders():
     assert "chartjs-plugin-zoom" in html
     assert "hammerjs" in html
     assert "mongo-header" in html
+    assert "outline-header" in html
     # Filled in by `inject_assets`; `{{ content }}` is filled in by the framework.
     assert "{{ style }}" not in html
     assert "{{ script }}" not in html
