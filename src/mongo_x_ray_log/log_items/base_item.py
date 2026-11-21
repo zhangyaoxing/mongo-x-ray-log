@@ -15,7 +15,7 @@ from typing import Any, Optional
 
 from bson import json_util
 
-from mongo_x_ray.shared import SEVERITY
+from mongo_x_ray.shared import SEVERITY, severity_badge
 from mongo_x_ray.utils import to_ejson
 from mongo_x_ray.version import Version
 from mongo_x_ray_log.rules.base_rule import BaseRule
@@ -32,16 +32,6 @@ def get_version(log_line):
     build_info = attr.get("buildInfo", {})
     version = build_info.get("version", "Unknown")
     return Version.parse(version)
-
-
-def colorize_severity(severity: SEVERITY) -> str:
-    mapping = {
-        SEVERITY.HIGH.name: "red",
-        SEVERITY.MEDIUM.name: "orange",
-        SEVERITY.LOW.name: "green",
-        SEVERITY.INFO.name: "gray",
-    }
-    return mapping.get(severity.name, "black")
 
 
 class BaseItem:
@@ -106,11 +96,7 @@ class BaseItem:
         output.write("|:----------:|:----------:|:----------:|---------|---------|\n")
         for idx, item in enumerate(self._test_result):
             severity = item["severity"]
-            severity_cell = (
-                f'<span data-sort-value="{severity.value}">'
-                f"<b style='color: {colorize_severity(severity)}'>"
-                f" {severity.name} </b></span>"
-            )
+            severity_cell = f'<span data-sort-value="{severity.value}">{severity_badge(severity)}</span>'
             category_cell = item["title"]
             risk = item.get("matched_risk")
             if risk:
