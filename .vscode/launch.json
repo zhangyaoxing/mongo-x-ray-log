@@ -15,6 +15,10 @@
                 "-m",
                 "not integration"
             ],
+            // The plugins have no .env of their own: share the core checkout's
+            // file so a debug session and a test run see the same variables.
+            "envFile": "${workspaceFolder}/../ce-mongo-x-ray/.env",
+            "cwd": "${workspaceFolder}/../ce-mongo-x-ray",
             "env": {
                 "PYTHONPATH": "${workspaceFolder}/src:${workspaceFolder}/../ce-mongo-x-ray/src"
             }
