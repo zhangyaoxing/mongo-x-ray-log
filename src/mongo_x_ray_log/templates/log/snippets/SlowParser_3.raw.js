@@ -29,7 +29,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 sample.textContent = "// Click query hash to display sample query...";
                 highlighted = -1;
             } else {
-                sample.textContent = JSON.stringify(row.sample, null, 2);
+                // The AI section only appears when the record carries a
+                // recommendation, so the viewer works without an API key too.
+                const parts = [];
+                if (row.ai_index) {
+                    parts.push('// AI Recommended Index', row.ai_index, '');
+                }
+                parts.push('// Query Sample', JSON.stringify(row.sample, null, 2));
+                sample.textContent = parts.join('\n');
                 highlighted = index;
             }
             delete sample.dataset.highlighted;

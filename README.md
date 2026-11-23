@@ -79,6 +79,26 @@ end of each "Review Raw Results" section, right after the charts it comments on:
 Each prompt is a compact summary of that section's statistics (never the raw
 log), so the calls are cheap and the answers short.
 
+The **Top Slow Operations** table additionally gets a per-query hint: each row
+is sent to the model (namespace, filter, sort, plan summary, counts) asking for
+an index that would make it cheaper. When one comes back, a Sparkle badge appears
+right after the query hash — hover it for the formatted `createIndex` command,
+or click the hash and the sample viewer shows it first:
+
+```
+// AI Recommended Index
+db.Restaurant.pizzas.createIndex({
+  size: 1,
+  price: -1
+})
+
+// Query Sample
+{ ... }
+```
+
+Without an API key the badge and that block are simply absent; the sample viewer
+still shows the query sample.
+
 **Configuration** — the analysis runs whenever an API key is configured, in any
 `ENV`. Set the environment variables (the repository's `.env` is read
 automatically):

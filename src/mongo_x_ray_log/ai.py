@@ -166,7 +166,8 @@ _INDEX_SYSTEM_PROMPT = (
     "namespace, the operation type, the filter and sort the query uses, the plan summary, the "
     "durations and how many keys/documents were examined versus returned. Decide whether a "
     "different index would make this query cheaper. Reply with JSON only, no prose, no code fence: "
-    '{"recommended_index": "<createIndex shell command, or an empty string when no index would help>"}'
+    '{"recommended_index": "<mongosh command, e.g. db.collection.createIndex({ field: 1 }), '
+    'or an empty string when no index would help>"}'
 )
 
 
@@ -191,6 +192,99 @@ def _parse_index_recommendation(text: str) -> Optional[str]:
     if not isinstance(recommendation, str):
         return None
     return recommendation.strip() or None
+
+
+def _split_top_level(text: str) -> list[str]:
+    """Split a shell literal on the commas that are not inside quotes or braces."""
+    parts: list[str] = []
+    buffer: list[str] = []
+    depth = 0
+    quote = ""
+    for char in text:
+        if quote:
+            buffer.append(char)
+            if char == quote:
+                quote = ""
+            continue
+        if char in "\"'":
+            quote = char
+            buffer.append(char)
+            continue
+        if char in "{[(":
+            depth += 1
+        elif char in "}])":
+            depth -= 1
+        if char == "," and depth == 0:
+            parts.append("".join(buffer).strip())
+            buffer = []
+            continue
+        buffer.append(char)
+    tail = "".join(buffer).strip()
+    if tail:
+        parts.append(tail)
+    return parts
+
+
+def _format_shell_literal(text: str, indent: int = 0) -> str:
+    """Pretty print a shell object/array literal: one field per line, nested two spaces in."""
+    text = text.strip()
+    pad = " " * indent
+    if text.startswith("{") and text.endswith("}"):
+        inner = text[1:-1].strip()
+        if not inner:
+            return "{}"
+        fields = []
+        for field in _split_top_level(inner):
+            key, separator, value = field.partition(":")
+            if not separator:
+                fields.append(" " * (indent + 2) + field)
+                continue
+            value = value.strip()
+            if value[:1] in "{[" and value[-1:] in "}]":
+                value = _format_shell_literal(value, indent + 2)
+            fields.append(" " * (indent + 2) + f"{key.strip()}: {value}")
+        return "{\n" + ",\n".join(fields) + "\n" + pad + "}"
+    if text.startswith("[") and text.endswith("]"):
+        inner = text[1:-1].strip()
+        if not inner:
+            return "[]"
+        return "[\n" + ",\n".join(" " * (indent + 2) + item for item in _split_top_level(inner)) + "\n" + pad + "]"
+    return text
+
+
+def format_index_recommendation(recommendation: str) -> str:
+    """Pretty print every object literal in a recommended command.
+
+    ``db.orders.createIndex({ status: 1, createdAt: -1 })`` becomes one field per
+    line, so the tooltip and the sample viewer show a readable command instead of
+    a long single line.
+    """
+    text = (recommendation or "").strip()
+    output: list[str] = []
+    index = 0
+    while index < len(text):
+        if text[index] != "{":
+            output.append(text[index])
+            index += 1
+            continue
+
+        depth = 0
+        closing = -1
+        for position in range(index, len(text)):
+            if text[position] == "{":
+                depth += 1
+            elif text[position] == "}":
+                depth -= 1
+                if depth == 0:
+                    closing = position
+                    break
+        if closing == -1:
+            output.append(text[index:])
+            break
+        output.append(_format_shell_literal(text[index : closing + 1]))
+        index = closing + 1
+
+    return "".join(output).strip()
 
 
 def recommend_index(record: dict) -> Optional[str]:
@@ -220,4 +314,15 @@ def recommend_index(record: dict) -> Optional[str]:
 
     from mongo_x_ray.ai_client import complete
 
-    return _parse_index_recommendation(complete(prompt, system=_INDEX_SYSTEM_PROMPT) or "")
+    recommendation = _parse_index_recommendation(complete(prompt, system=_INDEX_SYSTEM_PROMPT) or "")
+    if not recommendation:
+        return None
+
+    formatted = format_index_recommendation(recommendation)
+    if formatted.startswith("{"):
+        # a bare key pattern: wrap it in the createIndex call for its namespace
+        namespace = str(record.get("ns") or "")
+        collection = namespace.split(".", 1)[1] if "." in namespace else namespace
+        if collection:
+            formatted = f"db.{collection}.createIndex({formatted})"
+    return formatted

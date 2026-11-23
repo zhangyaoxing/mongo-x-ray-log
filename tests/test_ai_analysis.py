@@ -327,7 +327,8 @@ def test_index_recommendation_prompt_carries_the_table_json(monkeypatch):
         "n_returned": 1,
     }
 
-    assert ai.recommend_index(record) == "db.Restaurant.pizzas.createIndex({size: 1})"
+    # the recommendation comes back pretty printed
+    assert ai.recommend_index(record) == "db.Restaurant.pizzas.createIndex({\n  size: 1\n})"
     prompt, system = prompts[0]
     assert "Restaurant.pizzas" in prompt
     assert "COLLSCAN" in prompt
@@ -374,7 +375,7 @@ def test_slow_parser_renders_the_index_hint_after_the_hash():
     markup = SlowParser().markdown([record])
 
     assert 'class="ai-index"' in markup
-    assert "Recommended index" in markup
+    assert "AI Recommended Index" in markup
     assert "db.Restaurant.pizzas.createIndex({size: 1})" in markup
     # the badge follows the query hash link in the first cell
     assert markup.index("[904CC0B3](#0)") < markup.index('class="ai-index"')
@@ -382,3 +383,43 @@ def test_slow_parser_renders_the_index_hint_after_the_hash():
     without = dict(record)
     without.pop("ai_index")
     assert 'class="ai-index"' not in SlowParser().markdown([without])
+
+
+def test_index_recommendation_is_pretty_printed():
+    formatted = ai.format_index_recommendation("db.Restaurant.pizzas.createIndex({ size: 1, price: -1 })")
+
+    assert formatted == "db.Restaurant.pizzas.createIndex({\n  size: 1,\n  price: -1\n})"
+
+    with_options = ai.format_index_recommendation(
+        'db.pizzas.createIndex({ size: 1 }, { partialFilterExpression: { size: "small" } })'
+    )
+    assert with_options.startswith("db.pizzas.createIndex({\n  size: 1\n}, {")
+    assert '    size: "small"\n' in with_options
+
+    # already formatted input is left alone
+    assert ai.format_index_recommendation("db.a.createIndex({\n  a: 1\n})") == "db.a.createIndex({\n  a: 1\n})"
+
+
+def test_bare_key_pattern_is_wrapped_in_create_index(monkeypatch):
+    monkeypatch.setattr(
+        "mongo_x_ray.ai_client.complete",
+        lambda prompt, system=None: '{"recommended_index": "{ size: 1, price: -1 }"}',
+    )
+
+    recommendation = ai.recommend_index({"ns": "Restaurant.pizzas", "query_pattern": {"pattern": {"size": "small"}}})
+
+    assert recommendation == "db.pizzas.createIndex({\n  size: 1,\n  price: -1\n})"
+
+
+def test_sample_viewer_shows_the_ai_block_only_when_present():
+    from pathlib import Path
+
+    import mongo_x_ray_log
+
+    snippet = Path(mongo_x_ray_log.__file__).parent / "templates" / "log" / "snippets" / "SlowParser_3.raw.js"
+    js = snippet.read_text(encoding="utf-8")
+
+    assert "// AI Recommended Index" in js
+    assert "// Query Sample" in js
+    # the AI block is optional, so the viewer still works without a key
+    assert "if (row.ai_index)" in js

@@ -61,11 +61,14 @@ class SlowParser(BaseParser):
             hash_cell = f"[{query_hash}](#{i})"
             ai_index = line_json.get("ai_index")
             if ai_index:
-                tooltip = html_mod.escape(str(ai_index)).replace("\r\n", "<br>").replace("\n", "<br>")
+                # Markdown collapses raw newlines inside a table cell, so the
+                # formatted command has to keep them as character references;
+                # `.ai-index-command` renders with `white-space: pre`.
+                tooltip = html_mod.escape(str(ai_index)).replace("\r\n", "\n").replace("\n", "&#10;")
                 hash_cell += (
                     f' <span class="ai-index">{AI_ICON}'
-                    f'<span class="ai-index-tooltip"><span class="ai-index-title">Recommended index</span>'
-                    f"{tooltip}</span></span>"
+                    f'<span class="ai-index-tooltip"><span class="ai-index-title">AI Recommended Index</span>'
+                    f'<span class="ai-index-command">{tooltip}</span></span></span>'
                 )
             rows.append(
                 [
