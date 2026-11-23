@@ -18,6 +18,7 @@ from bson import json_util
 import mongo_x_ray_log.ai as ai
 from mongo_x_ray_log.log_items.connection_rate_item import ConnectionRateItem
 from mongo_x_ray_log.log_items.log_rate_item import LogRateItem
+from mongo_x_ray_log.log_items.slow_item import SlowItem
 from mongo_x_ray_log.log_items.slow_rate_item import SlowRateItem
 from mongo_x_ray_log.log_items.wef_item import WEFItem
 from tests.mocking import gen_mock_write_output
@@ -287,3 +288,97 @@ def test_ai_note_is_rendered_in_the_raw_results_section(monkeypatch):
     # ... but after the raw-results heading and after the item's charts
     assert report.index("## 2 Review Raw Results") < report.index("CHARTS")
     assert report.index("CHARTS") < report.index("AI-NOTE: Verdict about the charts.")
+
+
+def test_index_recommendation_is_parsed_from_json(monkeypatch):
+    assert ai._parse_index_recommendation('{"recommended_index": "db.a.createIndex({x: 1})"}') == (
+        "db.a.createIndex({x: 1})"
+    )
+    assert ai._parse_index_recommendation('```json\n{"recommended_index": "db.a.createIndex({x: 1})"}\n```') == (
+        "db.a.createIndex({x: 1})"
+    )
+    assert ai._parse_index_recommendation('{"recommended_index": ""}') is None
+    assert ai._parse_index_recommendation("no idea") is None
+    # a model that answers in prose still gets picked up
+    assert ai._parse_index_recommendation('Sure: {"recommended_index": "db.b.createIndex({y: -1})"}') == (
+        "db.b.createIndex({y: -1})"
+    )
+
+
+def test_index_recommendation_prompt_carries_the_table_json(monkeypatch):
+    prompts = []
+
+    def fake_complete(prompt, system=None):
+        prompts.append((prompt, system))
+        return '{"recommended_index": "db.Restaurant.pizzas.createIndex({size: 1})"}'
+
+    monkeypatch.setattr("mongo_x_ray.ai_client.complete", fake_complete)
+
+    record = {
+        "query_hash": "904CC0B3",
+        "ns": "Restaurant.pizzas",
+        "query_pattern": {"type": "find", "pattern": {"size": {"$in": ["small"]}}, "sort": {"price": -1}},
+        "plan_summary": "COLLSCAN",
+        "has_sort": True,
+        "count": 3,
+        "duration": 120,
+        "keys_examined": 0,
+        "docs_examined": 1,
+        "n_returned": 1,
+    }
+
+    assert ai.recommend_index(record) == "db.Restaurant.pizzas.createIndex({size: 1})"
+    prompt, system = prompts[0]
+    assert "Restaurant.pizzas" in prompt
+    assert "COLLSCAN" in prompt
+    assert '"size"' in prompt
+    assert '"price"' in prompt
+    assert "recommended_index" in system
+
+
+def test_slow_item_keeps_the_index_recommendation(tmp_path, monkeypatch):
+    monkeypatch.setattr("mongo_x_ray.ai_client.get_client", lambda: (object(), "test-model"))
+    monkeypatch.setattr(ai, "recommend_index", lambda record: f"db.x.createIndex({{ {record['ns']}: 1 }})")
+
+    item = SlowItem(output_folder=str(tmp_path), config={"ai_analysis": True})
+    for log in SLOW_LOGS:
+        item.analyze(log)
+    item.finalize_analysis()
+
+    assert item._cache
+    assert all(record["ai_index"].startswith("db.x.createIndex(") for record in item._cache)
+
+    # The parser reads the records back from the output file, so the
+    # recommendations have to be stored before that file is written.
+    aggregated = [record for record in item._load_records() if "query_hash" in record]
+    assert aggregated
+    assert all(record.get("ai_index", "").startswith("db.x.createIndex(") for record in aggregated)
+
+
+def test_slow_parser_renders_the_index_hint_after_the_hash():
+    from mongo_x_ray_log.parsers.slow_parser import SlowParser
+
+    record = {
+        "query_hash": "904CC0B3",
+        "ns": "Restaurant.pizzas",
+        "query_pattern": {"type": "find", "pattern": {"size": "small"}},
+        "plan_summary": "COLLSCAN",
+        "count": 2,
+        "duration": 40,
+        "keys_examined": 0,
+        "docs_examined": 1,
+        "n_returned": 1,
+        "ai_index": "db.Restaurant.pizzas.createIndex({size: 1})",
+    }
+
+    markup = SlowParser().markdown([record])
+
+    assert 'class="ai-index"' in markup
+    assert "Recommended index" in markup
+    assert "db.Restaurant.pizzas.createIndex({size: 1})" in markup
+    # the badge follows the query hash link in the first cell
+    assert markup.index("[904CC0B3](#0)") < markup.index('class="ai-index"')
+
+    without = dict(record)
+    without.pop("ai_index")
+    assert 'class="ai-index"' not in SlowParser().markdown([without])

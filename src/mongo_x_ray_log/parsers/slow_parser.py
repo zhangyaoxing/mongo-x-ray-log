@@ -8,6 +8,9 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
+import html as html_mod
+
+from mongo_x_ray.shared import AI_ICON
 from mongo_x_ray.utils import escape_markdown, format_json_md
 from mongo_x_ray_log.parsers.base_parser import BaseParser
 
@@ -55,9 +58,18 @@ class SlowParser(BaseParser):
             pattern_cell = f"Filter: <br><pre>{format_json_md(pattern)}</pre>"
             if sort:
                 pattern_cell += f"<br>Sort: <br><pre>{format_json_md(sort)}</pre>"
+            hash_cell = f"[{query_hash}](#{i})"
+            ai_index = line_json.get("ai_index")
+            if ai_index:
+                tooltip = html_mod.escape(str(ai_index)).replace("\r\n", "<br>").replace("\n", "<br>")
+                hash_cell += (
+                    f' <span class="ai-index">{AI_ICON}'
+                    f'<span class="ai-index-tooltip"><span class="ai-index-title">Recommended index</span>'
+                    f"{tooltip}</span></span>"
+                )
             rows.append(
                 [
-                    f"[{query_hash}](#{i})",
+                    hash_cell,
                     f"`{op}` on `{ns}`",
                     pattern_cell,
                     f"<pre>{format_json_md(details)}</pre>",

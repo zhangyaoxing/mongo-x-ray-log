@@ -125,30 +125,39 @@ class BaseItem:
         for item in items:
             self.append_test_result(item["host"], item["severity"], item["title"], item["description"])
 
+    def _ai_client(self):
+        """Return ``(client, model)`` when AI analysis should run, else ``None``."""
+        explicit = self.config.get("ai_analysis")
+        if explicit is not True and os.environ.get("PYTEST_CURRENT_TEST"):
+            # Tests never call the API unless a test opts in with `ai_analysis: true`.
+            return None
+        if explicit is False:
+            self._logger.info("AI analysis disabled by config (item_config.ai_analysis = false)")
+            return None
+        try:
+            from mongo_x_ray.ai_client import get_client
+        except ImportError:
+            self._logger.info("AI analysis skipped: the `openai` package is not installed")
+            return None
+
+        client, model = get_client()
+        if client is None:
+            self._logger.info("AI analysis skipped: OPENAI_API_KEY is not set")
+            return None
+        return client, model
+
     def _run_ai_analysis(self, analyzer) -> None:
         """Run *analyzer* and keep its verdict in ``self._ai_result``.
 
         Enabled whenever an API key is configured; ``ai_analysis: false`` in the
         item config turns it off (the switch to use before sharing a report from
-        a machine that has a key in .env), and test runs never call the API.
+        a machine that has a key in .env), and test runs never call the API
+        unless they ask for it.
         """
-        explicit = self.config.get("ai_analysis")
-        if explicit is not True and os.environ.get("PYTEST_CURRENT_TEST"):
-            # Tests never call the API unless a test opts in with `ai_analysis: true`.
+        ready = self._ai_client()
+        if ready is None:
             return
-        if explicit is False:
-            self._logger.info("AI analysis disabled by config (item_config.ai_analysis = false)")
-            return
-        try:
-            from mongo_x_ray.ai_client import get_client
-        except ImportError:
-            self._logger.info("AI analysis skipped: the `openai` package is not installed")
-            return
-
-        client, model = get_client()
-        if client is None:
-            self._logger.info("AI analysis skipped: OPENAI_API_KEY is not set")
-            return
+        _client, model = ready
 
         self._logger.info(yellow(f"Starting AI analysis for {self.name} with {model} ..."))
         try:

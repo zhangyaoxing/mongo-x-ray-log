@@ -19,6 +19,8 @@ the warning/error/fatal logs. They all summarise the section's statistics first
 
 from __future__ import annotations
 
+import json
+import re
 from collections import Counter
 from typing import Any, Optional
 
@@ -157,3 +159,65 @@ def analyze_wef(entries: list[dict]) -> Optional[str]:
         "healthy deployment and which are routine noise.\n" + "\n".join(lines)
     )
     return _complete(prompt)
+
+
+_INDEX_SYSTEM_PROMPT = (
+    "You are a MongoDB index expert. You are given one aggregated slow query record as JSON: the "
+    "namespace, the operation type, the filter and sort the query uses, the plan summary, the "
+    "durations and how many keys/documents were examined versus returned. Decide whether a "
+    "different index would make this query cheaper. Reply with JSON only, no prose, no code fence: "
+    '{"recommended_index": "<createIndex shell command, or an empty string when no index would help>"}'
+)
+
+
+def _parse_index_recommendation(text: str) -> Optional[str]:
+    """Pull ``recommended_index`` out of the model's JSON answer."""
+    payload = (text or "").strip()
+    if payload.startswith("```"):
+        payload = payload.split("\n", 1)[-1] if "\n" in payload else payload
+        payload = payload.rsplit("```", 1)[0]
+    payload = payload.strip()
+    try:
+        data = json.loads(payload)
+    except (ValueError, TypeError):
+        match = re.search(r"\{\s*\"recommended_index\"\s*:\s*\"(.*?)\"\s*\}", payload, re.S)
+        if not match:
+            return None
+        return match.group(1).strip() or None
+
+    if not isinstance(data, dict):
+        return None
+    recommendation = data.get("recommended_index", "")
+    if not isinstance(recommendation, str):
+        return None
+    return recommendation.strip() or None
+
+
+def recommend_index(record: dict) -> Optional[str]:
+    """Ask for an index that would speed up one aggregated slow query record.
+
+    The prompt carries the same JSON the "Top Slow Operations" table is built
+    from (namespace, filter, sort, plan summary, durations, examined/returned
+    counts), so the answer can be judged against what the report already shows.
+    Returns the recommended ``createIndex`` command, or ``None`` when the model
+    suggests no index (or answers something unusable).
+    """
+    query_pattern = record.get("query_pattern") or {}
+    payload = {
+        "ns": record.get("ns"),
+        "operation": query_pattern.get("type"),
+        "filter": query_pattern.get("pattern"),
+        "sort": query_pattern.get("sort") or None,
+        "plan_summary": record.get("plan_summary") or None,
+        "has_sort_stage": bool(record.get("has_sort")),
+        "count": record.get("count"),
+        "total_duration_ms": record.get("duration"),
+        "keys_examined": record.get("keys_examined"),
+        "docs_examined": record.get("docs_examined"),
+        "returned": record.get("n_returned"),
+    }
+    prompt = "Slow query record:\n" + json.dumps(payload, default=str, ensure_ascii=False, sort_keys=True)
+
+    from mongo_x_ray.ai_client import complete
+
+    return _parse_index_recommendation(complete(prompt, system=_INDEX_SYSTEM_PROMPT) or "")

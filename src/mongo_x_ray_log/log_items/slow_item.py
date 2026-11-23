@@ -9,6 +9,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
 from mongo_x_ray.utils import json_hash
+from mongo_x_ray_log import ai as _ai
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.slow_parser import SlowParser
 from mongo_x_ray_log.query_analyzer import analyze_query_pattern
@@ -93,12 +94,38 @@ class SlowItem(BaseItem):
         # Persist the aggregated top-N records (appended after the raw lines)
         # so they survive together with the chart data in the output file.
         self._cache = list(self._patterns.values())
+        # Ask for index recommendations before the records are written: the
+        # parser reads them back from the output file, so an `ai_index` added
+        # afterwards would never reach the report.
+        self._run_index_recommendations()
         super().finalize_analysis()
         # Apply the rules to generate the test results (e.g. collection scans,
         # poor query targeting).
         for rule in self._rules.values():
             test_result, _ = rule.apply(self._cache, extra_info={"host": self._hostname or "unknown"})
             self.append_test_results(test_result)
+
+    def _run_index_recommendations(self) -> None:
+        """Ask the AI for an index per top-N record and keep it on the record.
+
+        The parser renders a Sparkle icon after the query hash when a record has
+        a recommendation; hovering it shows the `createIndex` command.
+        """
+        ready = self._ai_client()
+        if ready is None:
+            return
+        _client, model = ready
+
+        self._logger.info("Asking %s for index recommendations on %d slow operation(s) ...", model, len(self._cache))
+        for record in self._cache:
+            try:
+                recommendation = _ai.recommend_index(record)
+            except Exception:
+                self._logger.warning("Index recommendation failed for %s", record.get("query_hash"), exc_info=True)
+                continue
+            if recommendation:
+                record["ai_index"] = recommendation
+                self._logger.debug("Index for %s: %s", record.get("query_hash"), recommendation)
 
     def review_results_markdown(self, f):
         records = self._load_records()
