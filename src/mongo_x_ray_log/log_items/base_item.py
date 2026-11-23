@@ -15,7 +15,8 @@ from typing import Any, Optional
 
 from bson import json_util
 
-from mongo_x_ray.shared import AI_ICON, SEVERITY, severity_badge
+from mongo_x_ray.shared import SEVERITY, severity_badge
+from mongo_x_ray.shared import ai_note_markdown as render_ai_note
 from mongo_x_ray.utils import to_ejson, yellow
 from mongo_x_ray.version import Version
 from mongo_x_ray_log.rules.base_rule import BaseRule
@@ -167,13 +168,10 @@ class BaseItem:
             self._ai_result = ""
 
     def ai_note_markdown(self, output) -> None:
-        """Write the section's AI verdict as a note, if there is one."""
-        if not self._ai_result:
-            return
-        output.write(f'> <span class="ai-label">{AI_ICON} AI Analysis</span>\n>\n')
-        for line in self._ai_result.split("\n"):
-            output.write(f"> {line}\n")
-        output.write("\n")
+        """Write the section's AI verdict as a note (with a copy button)."""
+        note = render_ai_note(self._ai_result)
+        if note:
+            output.write(note)
 
     def _load_records(self) -> list:
         """Load the analysed records from the output file."""

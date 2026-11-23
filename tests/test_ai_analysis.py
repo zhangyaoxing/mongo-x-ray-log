@@ -168,6 +168,9 @@ def test_ai_note_markdown_renders_the_verdict():
     assert "AI Analysis" in note
     assert note.startswith("> ")
     assert "Steady churn, nothing to act on." in note
+    # the copy button carries the note itself, without the title (#378)
+    assert 'class="ai-copy-btn"' in note
+    assert 'data-ai-note="Steady churn, nothing to act on."' in note
 
 
 def test_analyzers_send_a_compact_summary(monkeypatch):
