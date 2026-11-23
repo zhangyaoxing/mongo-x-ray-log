@@ -30,11 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 highlighted = -1;
             } else {
                 sample.textContent = JSON.stringify(row.sample, null, 2);
-                if (row.ai_analysis) {
-                    sample.textContent += "\n\n// AI Analysis: \n";
-                    const analysis = row.ai_analysis.split(/(?<=[\n.!;])\W+/).map(line => "// " + line).join("\n");
-                    sample.textContent += analysis;
-                }
                 highlighted = index;
             }
             delete sample.dataset.highlighted;

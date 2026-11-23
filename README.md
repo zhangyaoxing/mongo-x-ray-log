@@ -64,6 +64,43 @@ x-ray log [-h] [-s CHECKSET] [-o OUTPUT] [-f {markdown,html,pdf}] [--no-browser]
 | `StateTraceItem` | Visualize replica set member state changes over time. |
 | `WEFItem` | Visualize warning, error and fatal log messages. |
 
+## AI Analysis (Optional)
+
+Four sections can carry an AI verdict, rendered as an "AI Analysis" note at the
+end of each section in the report:
+
+| Section | What the model is asked |
+| --- | --- |
+| Connection Rate | Whether the connection churn is a normal pattern or a connection leak. |
+| Log Rate Analysis | Whether the repeated INFO logs look like a healthy pattern or an ongoing problem. |
+| Slow Rate | Whether the slow query rate and its namespaces look normal. |
+| Warning/Error/Fatal Logs | Which of the warning/error/fatal messages are worth noticing. |
+
+Each prompt is a compact summary of that section's statistics (never the raw
+log), so the calls are cheap and the answers short.
+
+**Configuration** — the analysis runs whenever an API key is configured, in any
+`ENV`. Set the environment variables (the repository's `.env` is read
+automatically):
+
+| Variable | Required | Default | Description |
+| --- | :---: | --- | --- |
+| `OPENAI_API_KEY` | Yes | — | API key for the AI service. |
+| `OPENAI_BASE_URL` | No | OpenAI default | Compatible API endpoint (e.g. DeepSeek). |
+| `AI_MODEL` | No | `gpt-4o` | Model name to use. |
+
+To turn it off even when a key is configured, disable it in the config file:
+
+```json
+{
+    "log": {
+        "item_config": { "ai_analysis": false }
+    }
+}
+```
+
+Or per item, e.g. `"item_config": { "WEFItem": { "ai_analysis": false } }`.
+
 ## Development
 
 Requires Python 3.10+, MongoDB 5.0 or later, and the [mongo-x-ray](https://github.com/mongodb-ps/ce-mongo-x-ray) core package.

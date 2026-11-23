@@ -15,8 +15,8 @@ from typing import Any, Optional
 
 from bson import json_util
 
-from mongo_x_ray.shared import SEVERITY, severity_badge
-from mongo_x_ray.utils import to_ejson
+from mongo_x_ray.shared import AI_ICON, SEVERITY, severity_badge
+from mongo_x_ray.utils import to_ejson, yellow
 from mongo_x_ray.version import Version
 from mongo_x_ray_log.rules.base_rule import BaseRule
 
@@ -46,6 +46,7 @@ class BaseItem:
         self._server_version: Optional[Version] = None
         self._hostname: Optional[str] = None
         self._test_result: list = []
+        self._ai_result: str = ""
         self._rules: dict[str, BaseRule] = {}
         self._description: str = ""
         if os.path.isfile(self._output_file):
@@ -123,6 +124,47 @@ class BaseItem:
     def append_test_results(self, items: list) -> None:
         for item in items:
             self.append_test_result(item["host"], item["severity"], item["title"], item["description"])
+
+    def _run_ai_analysis(self, analyzer) -> None:
+        """Run *analyzer* and keep its verdict in ``self._ai_result``.
+
+        Enabled whenever an API key is configured; ``ai_analysis: false`` in the
+        item config turns it off (the switch to use before sharing a report from
+        a machine that has a key in .env), and test runs never call the API.
+        """
+        explicit = self.config.get("ai_analysis")
+        if explicit is not True and os.environ.get("PYTEST_CURRENT_TEST"):
+            # Tests never call the API unless a test opts in with `ai_analysis: true`.
+            return
+        if explicit is False:
+            self._logger.info("AI analysis disabled by config (item_config.ai_analysis = false)")
+            return
+        try:
+            from mongo_x_ray.ai_client import get_client
+        except ImportError:
+            self._logger.info("AI analysis skipped: the `openai` package is not installed")
+            return
+
+        client, model = get_client()
+        if client is None:
+            self._logger.info("AI analysis skipped: OPENAI_API_KEY is not set")
+            return
+
+        self._logger.info(yellow(f"Starting AI analysis for {self.name} with {model} ..."))
+        try:
+            self._ai_result = (analyzer() or "").strip()
+        except Exception:
+            self._logger.warning("AI analysis failed for %s", self.name, exc_info=True)
+            self._ai_result = ""
+
+    def ai_note_markdown(self, output) -> None:
+        """Write the section's AI verdict as a note, if there is one."""
+        if not self._ai_result:
+            return
+        output.write(f'> <span class="ai-label">{AI_ICON} AI Analysis</span>\n>\n')
+        for line in self._ai_result.split("\n"):
+            output.write(f"> {line}\n")
+        output.write("\n")
 
     def _load_records(self) -> list:
         """Load the analysed records from the output file."""

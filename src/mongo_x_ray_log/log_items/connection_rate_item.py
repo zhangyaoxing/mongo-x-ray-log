@@ -11,6 +11,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 import math
 from datetime import datetime
 
+from mongo_x_ray_log import ai as _ai
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.connection_rate_parser import ConnectionRateParser
 from mongo_x_ray_log.rules.connection_rate_rule import ConnectionRateRule
@@ -69,6 +70,7 @@ class ConnectionRateItem(BaseItem):
         for rule in self._rules.values():
             test_result, _ = rule.apply(self._records, extra_info={"host": self._hostname or "unknown"})
             self.append_test_results(test_result)
+        self._run_ai_analysis(lambda: _ai.analyze_connection_rate(self._records))
 
     def review_results_markdown(self, f):
         parser = ConnectionRateParser()

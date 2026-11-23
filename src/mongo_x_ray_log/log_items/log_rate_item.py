@@ -10,6 +10,7 @@ THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 
 from datetime import datetime
 
+from mongo_x_ray_log import ai as _ai
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.log_rate_parser import LogRateParser
 
@@ -61,6 +62,7 @@ class LogRateItem(BaseItem):
     def finalize_analysis(self) -> None:
         self._cache = [v for v in self._temp_cache.values() if len(v["buckets"]) > 1]
         super().finalize_analysis()
+        self._run_ai_analysis(lambda: _ai.analyze_log_rate(self._cache))
 
     def review_results_markdown(self, f) -> None:
         parser = LogRateParser()

@@ -8,9 +8,7 @@ YOU ARE RESPONSIBLE FOR TESTING, VALIDATING, AND SECURING THIS CODE WITHIN YOUR 
 THIS MATERIAL IS PROVIDED "AS IS" WITHOUT WARRANTY OR LIABILITY.
 """
 
-from random import randint
-
-from mongo_x_ray.utils import bold, env, green, yellow
+from mongo_x_ray_log import ai as _ai
 from mongo_x_ray_log.log_items.base_item import BaseItem
 from mongo_x_ray_log.parsers.wef_parser import WEFParser
 from mongo_x_ray_log.rules.severity_log_rule import SeverityLogRule
@@ -22,7 +20,6 @@ class WEFItem(BaseItem):
         self._cache = {}
         self.name = "Warning/Error/Fatal Logs"
         self.description = "Visualize warning, error, and fatal log messages."
-        self._ai_support = self.config.get("ai_support", False)
         self._rules["severity_log"] = SeverityLogRule(config)
 
     def analyze(self, log_line):
@@ -45,32 +42,10 @@ class WEFItem(BaseItem):
 
     def finalize_analysis(self):
         self._cache = list(self._cache.values())
-        cache = self._cache
-
-        if self._ai_support == "gpt":
-            try:
-                from mongo_x_ray.ai_client import GPT_MODEL
-                from mongo_x_ray_log.ai import analyze_log_line_gpt
-
-                if env == "development":
-                    cache = [self._cache[randint(0, len(self._cache) - 1)]] if len(self._cache) > 0 else []
-                    self._logger.info(yellow("Running in development mode. Only process ONE random log entry with AI."))
-                    self._logger.info(yellow(f"Log ID: {cache[0]['id']}"))
-                self._logger.info(
-                    "Using GPT model (%s) for W/E/F log analysis. This can take a few minutes...",
-                    green(bold(GPT_MODEL)),
-                )
-                for item in cache:
-                    item["ai_analysis"] = analyze_log_line_gpt(item["sample"])
-                    self._logger.debug("AI analyzed log: %s", item["id"])
-
-            except ImportError as e:
-                self._logger.error("OpenAI support enabled but the OpenAI library is not available: %s", e)
-                self._logger.error("Please install the OpenAI dependency or disable AI support in config.json")
-                self._ai_support = False
 
         self._match_risks()
         super().finalize_analysis()
+        self._run_ai_analysis(lambda: _ai.analyze_wef(self._cache))
         # Apply the rules to generate the test results (e.g. warning logs present).
         for rule in self._rules.values():
             test_result, _ = rule.apply(self._cache, extra_info={"host": self._hostname or "unknown"})
