@@ -19,6 +19,24 @@ from mongo_x_ray_log.framework import Framework
 logger = logging.getLogger(__name__)
 
 
+def apply_cli_overrides(config: dict, args) -> dict:
+    """Apply the optional CLI switches to the loaded module config.
+
+    Both switches default to ``None``: when they are not given on the command
+    line the values from the config file win, so editing `config.json` (for
+    example `item_config.SlowItem.top`) takes effect.
+    """
+    rate = getattr(args, "rate", None)
+    if rate is not None:
+        config["sample_rate"] = rate
+
+    top = getattr(args, "top", None)
+    if top is not None:
+        config.setdefault("item_config", {}).setdefault("SlowItem", {})["top"] = top
+
+    return config
+
+
 class LogPlugin(Plugin):
     name = "log"
     distribution = "mongo-x-ray-log"
@@ -76,11 +94,16 @@ Examples:
         parser.add_argument(
             "-r",
             "--rate",
-            help="Log sampling rate (e.g., 1 for all logs, 0.1 for 10%% logs). Defaults to 1.",
+            help="Log sampling rate (e.g., 1 for all logs, 0.1 for 10%% logs). Defaults to the `sample_rate` in the config file.",
             type=float,
-            default=1.0,
+            default=None,
         )
-        parser.add_argument("--top", help="Top N slow queries. Defaults to 10.", type=int, default=10)
+        parser.add_argument(
+            "--top",
+            help="Top N slow queries. Defaults to the `SlowItem.top` in the config file.",
+            type=int,
+            default=None,
+        )
         parser.add_argument(
             "--discover",
             help="Recursively search the given path for a folder containing log files.",
@@ -107,9 +130,7 @@ Examples:
             return 1
 
         try:
-            config = load_config(args.config)["log"]
-            config["sample_rate"] = args.rate
-            config["item_config"]["SlowItem"]["top"] = args.top
+            config = apply_cli_overrides(load_config(args.config)["log"], args)
         except FileNotFoundError:
             logger.error("Config file not found: %s", args.config)
             logger.info("Please provide a valid path to config.json.")

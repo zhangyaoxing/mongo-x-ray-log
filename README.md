@@ -47,8 +47,8 @@ x-ray log [-h] [-s CHECKSET] [-o OUTPUT] [-f {markdown,html,pdf}] [--no-browser]
 | `-o, --output` | Output folder path. | `output/` |
 | `-f, --format` | Output format: `markdown`, `html` or `pdf` (PDF also keeps Markdown and HTML). | `html` |
 | `--no-browser` | Do not open the generated report in the browser. | `false` |
-| `-r, --rate` | Log sampling rate, e.g. `1` for all logs, `0.1` for 10% of logs. | `1` |
-| `--top` | Top N slow queries to list. | `10` |
+| `-r, --rate` | Log sampling rate, e.g. `1` for all logs, `0.1` for 10% of logs. Overrides `sample_rate` from the config file when given. | config `sample_rate` |
+| `--top` | Top N slow queries to list. Overrides `item_config.SlowItem.top` from the config file when given. | config `SlowItem.top` |
 | `--discover` | Recursively search the given path for folders containing log files. | `false` |
 
 ## Analysis Items
