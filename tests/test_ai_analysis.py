@@ -423,3 +423,27 @@ def test_sample_viewer_shows_the_ai_block_only_when_present():
     assert "// Query Sample" in js
     # the AI block is optional, so the viewer still works without a key
     assert "if (row.ai_index)" in js
+
+
+def test_sample_viewers_use_javascript_highlighting():
+    from mongo_x_ray_log.parsers.slow_parser import SlowParser
+    from mongo_x_ray_log.parsers.wef_parser import WEFParser
+
+    record = {
+        "query_hash": "904CC0B3",
+        "ns": "Restaurant.pizzas",
+        "query_pattern": {"type": "find", "pattern": {"size": "small"}},
+        "plan_summary": "COLLSCAN",
+        "count": 2,
+        "duration": 40,
+        "keys_examined": 0,
+        "docs_examined": 1,
+        "n_returned": 1,
+    }
+
+    slow_markup = SlowParser().markdown([record])
+    assert "```javascript" in slow_markup
+    assert "```json" not in slow_markup
+
+    wef_markup = WEFParser().markdown([{"id": 22601, "severity": "w", "msg": "warn", "timestamp": [1], "sample": {}}])
+    assert "```javascript" in wef_markup

@@ -61,7 +61,7 @@ class WEFParser(BaseParser):
                 ],
                 "rows": rows,
             },
-            {"type": "code", "language": "json", "code": "// Click error code to review sample log line..."},
+            {"type": "code", "language": "javascript", "code": "// Click error code to review sample log line..."},
             {"type": "chart", "data": data},
         ]
 

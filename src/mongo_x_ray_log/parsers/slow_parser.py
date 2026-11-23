@@ -95,7 +95,7 @@ class SlowParser(BaseParser):
                 "rows": rows,
             },
             # The shared sample code block comes last
-            {"type": "code", "language": "json", "code": "// Click query hash to display sample query..."},
+            {"type": "code", "language": "javascript", "code": "// Click query hash to display sample query..."},
             # Wiring chart block: attaches click handlers to the table anchors
             {"type": "chart", "data": top_n},
         ]
