@@ -233,3 +233,57 @@ def test_wef_item_no_longer_runs_per_line_ai():
     item.finalize_analysis()
 
     assert all("ai_analysis" not in entry for entry in item._cache)
+
+
+def test_ai_note_is_rendered_in_the_raw_results_section(monkeypatch):
+    """The verdict sits with the charts, not with the findings table."""
+    from datetime import datetime, timezone
+    from typing import TextIO
+
+    import mongo_x_ray_log.framework as framework_module
+    from mongo_x_ray_log.framework import Framework
+
+    class FakeSummary:
+        def __init__(self, **_kwargs):
+            pass
+
+        def summarize(self, _items):
+            pass
+
+        def overview(self, output: TextIO) -> None:
+            output.write("SUMMARY\n\n")
+
+    class FakeItem:
+        name = "Fake Item"
+        description = "Fake description."
+        _test_result: list = []
+        _show_reset = False
+        _ai_result = "Verdict about the charts."
+
+        def test_result_markdown(self, output: TextIO) -> None:
+            output.write("FINDINGS\n\n")
+
+        def review_results_markdown(self, output: TextIO) -> None:
+            output.write("CHARTS\n\n")
+
+        def ai_note_markdown(self, output: TextIO) -> None:
+            if self._ai_result:
+                output.write(f"AI-NOTE: {self._ai_result}\n\n")
+
+    monkeypatch.setattr(framework_module, "SummaryItem", FakeSummary)
+
+    framework = Framework(file_path="mongodb.log", config={})
+    framework._items = [FakeItem()]
+    framework._log_start = datetime(2025, 1, 1, tzinfo=timezone.utc)
+    framework._log_end = datetime(2025, 1, 2, tzinfo=timezone.utc)
+
+    output = StringIO()
+    framework._render_markdown(output)
+    report = output.getvalue()
+
+    assert report.count("AI-NOTE: Verdict about the charts.") == 1
+    # not in the findings section ...
+    assert report.index("FINDINGS") < report.index("## 2 Review Raw Results")
+    # ... but after the raw-results heading and after the item's charts
+    assert report.index("## 2 Review Raw Results") < report.index("CHARTS")
+    assert report.index("CHARTS") < report.index("AI-NOTE: Verdict about the charts.")

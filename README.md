@@ -67,7 +67,7 @@ x-ray log [-h] [-s CHECKSET] [-o OUTPUT] [-f {markdown,html,pdf}] [--no-browser]
 ## AI Analysis (Optional)
 
 Four sections can carry an AI verdict, rendered as an "AI Analysis" note at the
-end of each section in the report:
+end of each "Review Raw Results" section, right after the charts it comments on:
 
 | Section | What the model is asked |
 | --- | --- |

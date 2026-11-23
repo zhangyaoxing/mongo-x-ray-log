@@ -330,7 +330,6 @@ class Framework(BaseFramework):
             output.write(f"[Review Raw Results &rarr;](#{review_title_id})\n\n")
             try:
                 item.test_result_markdown(output)
-                item.ai_note_markdown(output)
             except Exception as e:
                 self._logger.warning(yellow(f"Failed to generate test results for log item '{item.name}': {e}"))
                 continue
@@ -348,6 +347,8 @@ class Framework(BaseFramework):
                 )
             try:
                 item.review_results_markdown(output)
+                # The AI verdict belongs next to the charts it talks about.
+                item.ai_note_markdown(output)
             except Exception as e:
                 self._logger.warning(yellow(f"Failed to generate markdown for log item '{item.name}': {e}"))
                 continue
