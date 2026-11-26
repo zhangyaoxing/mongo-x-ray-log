@@ -1,5 +1,12 @@
 # mongo-x-ray-log Release Notes
 
+## 2.1.4
+
+Version alignment with x-ray 2.1.4 — the first published build of the 2.1.3 changes.
+
+`mongo-x-ray==2.1.3` reached PyPI without the MongoDB theme stylesheet, so its reports rendered unstyled and the 2.1.3 plugin packages were never published; 2.1.4 fixes the core packaging and these plugins require `mongo-x-ray>=2.1.4`.
+
+
 ## 2.1.3
 
 ### Added
@@ -22,7 +29,7 @@
 ### Changed
 - The AI analysis runs whenever an API key is configured, in any `ENV`; `"ai_analysis": false` disables it (per item or for the module) and `"ai_analysis": true` opts a test run in. The old `WEFItem.ai_support` switch and its per-log-line analysis are gone.
 - The report outline has a proper header row (the collapse toggle no longer covers the title) and the outline highlight/jump were fixed upstream.
-- Requires `mongo-x-ray>=2.1.3` for the shared AI/badge helpers and the report stylesheets.
+- Requires `mongo-x-ray>=2.1.4` for the shared AI/badge helpers and the report stylesheets.
 
 ### Fixed
 - **`item_config.SlowItem.top` / `sample_rate` are honoured**: `--top` and `-r/--rate` used to default to `10` and `1.0` and always overwrite the config file, so editing the config had no effect. They now only override it when passed.
