@@ -1,5 +1,33 @@
 # mongo-x-ray-log Release Notes
 
+## 2.1.3
+
+### Added
+- **AI analysis for four sections**: Connection Rate (normal churn or a leak?), Log Rate Analysis (are the repeated INFO logs a problem?), Slow Rate (does the rate look normal?) and Warning/Error/Fatal Logs (which messages are worth noticing?). Each sends a compact statistics summary — never the raw log — and shows the verdict as an "AI Analysis" note at the end of the matching `2 Review …` section, next to the charts.
+- **AI index recommendation for slow operations**: every row of the Top Slow Operations table is sent to the model (namespace, filter, sort, plan summary, counts) asking for an index that would make it cheaper. A Sparkle badge appears after the query hash when there is one; hovering shows the formatted `createIndex` command, and the query sample viewer shows it above the sample:
+  ```
+  // AI Recommended Index
+  db.pizzas.createIndex({
+    size: 1,
+    price: -1
+  })
+
+  // Query Sample
+  { ... }
+  ```
+- **Copy button on every AI note** (the note only, not the title).
+- **MongoDB report template** (`log/mongodb.html`): dark report in the design system, no remote stylesheet or webfont.
+- **Severity badges** in the findings table and the "By Severity" summary.
+
+### Changed
+- The AI analysis runs whenever an API key is configured, in any `ENV`; `"ai_analysis": false` disables it (per item or for the module) and `"ai_analysis": true` opts a test run in. The old `WEFItem.ai_support` switch and its per-log-line analysis are gone.
+- The report outline has a proper header row (the collapse toggle no longer covers the title) and the outline highlight/jump were fixed upstream.
+- Requires `mongo-x-ray>=2.1.3` for the shared AI/badge helpers and the report stylesheets.
+
+### Fixed
+- **`item_config.SlowItem.top` / `sample_rate` are honoured**: `--top` and `-r/--rate` used to default to `10` and `1.0` and always overwrite the config file, so editing the config had no effect. They now only override it when passed.
+- **The query/error sample viewers are highlighted as JavaScript**, matching their `//` comments and mongosh commands, instead of JSON.
+
 ## 2.1.2
 
 ### Fixed
